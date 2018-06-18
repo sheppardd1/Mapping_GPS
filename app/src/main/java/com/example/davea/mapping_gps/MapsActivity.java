@@ -63,6 +63,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     boolean wasReset = true;
     String time;
     String timeArray[] = new String[ARRAY_SIZE_MAX];
+    float average = -999;
 
 
     //Time:
@@ -119,7 +120,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     for(int i = 0; i < numPins; i++){
                         sum += dataArray[i];
                     }
-                    float average = sum / ((float)numPins);
+                    average = sum / ((float)numPins);
                     TV.setText("RESET\naverage accuracy: " + average);
                     reset();
                     gMap.clear();
@@ -172,7 +173,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void writeData(int i, FileOutputStream outputStream){
         if(i == 0) {    //print time range of data points as header of data
-            fileContents += "-----------------------\n" + time + " to ";
+            if(fileContents != null) fileContents += "-----------------------\n" + time + " to ";
+            else fileContents = "-----------------------\n" + time + " to ";    //if file was empty to begin with, we don't want to print out "null" at the beginning
             //convert epoch time to calendar data
             //cal.setTimeInMillis(currentLocation.getTime());
             //print accuracy value on screen along with coordinates and time
@@ -181,9 +183,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         fileContents += "#" + (i + 1) + ")  " + dataArray[i] + "\n";    //set fileContents to number and accuracy value [example: "#1)  9.0"  ]
-        if(dataArray[i + 1] == null) {
-            fileContents += "\n\n"; //add to endlines at end of data
-            try {
+        if(dataArray[i + 1] == null) {  //end of data that must be written is reached
+            fileContents += "\nAverage: " + average + "\n\n"; //write the average and add some endlines
+            try {   //write file
                 outputStream.write(fileContents.getBytes());    //write fileContents into file
                 TV.setText(TV.getText() + "\nFile Written");
             } catch (IOException e) {
