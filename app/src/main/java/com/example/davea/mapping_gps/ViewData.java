@@ -21,10 +21,9 @@ public class ViewData extends AppCompatActivity {
 
     FileInputStream inStream;
     BufferedReader reader;
-    final String filename = "GPS_data.txt"; //name of file to open, as assigned when written to
+    //final String filename = "GPS_data.txt"; //name of file to open, as assigned when written to
     TextView TV2;
     Button btnDelete;
-    File dataFile;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,22 +39,17 @@ public class ViewData extends AppCompatActivity {
         btnDelete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                deleteFile(filename);   //delete the file
+                deleteFile(MapsActivity.filename);   //delete the file
                 TV2.setText("File deleted");    //say so
-                MapsActivity.fileContents = null;
+                MapsActivity.fileContents = null;   //clear contents of fileContents so that it is not rewritten next time new data is added to the file
             }
         });
-
-        /*
-        https://stackoverflow.com/questions/12910503/read-file-as-string
-        https://developer.android.com/reference/java/io/File
-        */
 
     }
 
     void readFile(){
         try {
-            inStream = openFileInput(filename); //open file and set as input stream
+            inStream = openFileInput(MapsActivity.filename); //open file and set as input stream
             reader = new BufferedReader(new InputStreamReader(new DataInputStream(inStream)));  //set value of reader
             String line;    //declare string to read in one line at a time
             while((line = reader.readLine()) != null){

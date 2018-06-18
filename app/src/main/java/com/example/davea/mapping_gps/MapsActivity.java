@@ -42,7 +42,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //Constants:
     final int UPDATE_INTERVAL = 3000;   //when on, update location data every UPDATE_INTERVAL milliseconds
     final int ARRAY_SIZE_MAX = 10000;
-    final String filename = "GPS_data.txt";
+    static final String filename = "GPS_data.txt";
 
     //Files:
     File dataFile;
@@ -59,7 +59,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public int numPins = 0;
     String name = "X";
     Float dataArray[] = new Float[ARRAY_SIZE_MAX];
-    static String fileContents;
+    static String fileContents; //is static so that it can be accessed in other activity
     boolean wasReset = true;
     String time;
     String timeArray[] = new String[ARRAY_SIZE_MAX];
