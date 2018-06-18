@@ -24,7 +24,9 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
@@ -39,8 +41,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //Constants:
     final int UPDATE_INTERVAL = 3000;   //when on, update location data every UPDATE_INTERVAL milliseconds
-    final int ARRAY_SIZE = 10000;
+    final int ARRAY_SIZE_MAX = 10000;
     final String filename = "GPS_data.txt";
+
+    //Files:
+    File dataFile;
 
     //UI:
     Button start, reset, viewData;
@@ -53,11 +58,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LatLng currentPosition;
     public int numPins = 0;
     String name = "X";
-    Float dataArray[] = new Float[ARRAY_SIZE];
+    Float dataArray[] = new Float[ARRAY_SIZE_MAX];
     String fileContents;
     boolean wasReset = true;
     String time;
-    String timeArray[] = new String[ARRAY_SIZE];
+    String timeArray[] = new String[ARRAY_SIZE_MAX];
 
 
     //Time:
@@ -134,7 +139,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     public void setup(){
-        for(int i = 0; i < ARRAY_SIZE; i++) {
+        for(int i = 0; i < ARRAY_SIZE_MAX; i++) {
             dataArray[i] = null;
         }
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
@@ -143,20 +148,31 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         viewData = findViewById(R.id.btnViewData);
         TV = findViewById(R.id.TV);
         TV.setText("Press START to begin");
+
+        //create file
+        dataFile = new File(filename);
     }
 
     public void reset(){
-        for (int i = 0; i < ARRAY_SIZE && dataArray[i] != null; i++){
-            writeData(dataArray[i], i);
-            dataArray[i] = null;
+        FileOutputStream outputStream;
+        try {
+            outputStream = openFileOutput(filename, Context.MODE_PRIVATE);  //open file and set to output stream
+            for (int i = 0; i < ARRAY_SIZE_MAX && dataArray[i] != null; i++){
+                writeData(i, outputStream);
+                dataArray[i] = null;
+            }
+            outputStream.close(); //close file
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
         numPins = 0;
         wasReset = true;
     }
 
-    public void writeData(float input, int i){
+    public void writeData(int i, FileOutputStream outputStream){
         if(i == 0) {    //print time range of data points as header of data
-            fileContents += "-----------------------\n\n" + time + " to ";
+            fileContents += "-----------------------\n" + time + " to ";
             //convert epoch time to calendar data
             //cal.setTimeInMillis(currentLocation.getTime());
             //print accuracy value on screen along with coordinates and time
@@ -165,17 +181,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         fileContents += "#" + (i + 1) + ")  " + dataArray[i] + "\n";    //set fileContents to number and accuracy value [example: "#1)  9.0"  ]
-
-        FileOutputStream outputStream;
-
-        try {
-            outputStream = openFileOutput(filename, Context.MODE_PRIVATE);  //open file and set to output stream
-            outputStream.write(fileContents.getBytes());    //write fileContents into file
-            outputStream.close();   //close file - this is inefficient, but works for now, see below
-            //TODO: only open and close file once, not every time this function is activated
-        } catch (Exception e) {
-            e.printStackTrace();
+        if(dataArray[i + 1] == null) {
+            fileContents += "\n\n"; //add to endlines at end of data
+            try {
+                outputStream.write(fileContents.getBytes());    //write fileContents into file
+                TV.setText(TV.getText() + "\nFile Written");
+            } catch (IOException e) {
+                e.printStackTrace();
+                TV.setText(TV.getText() + "\nERROR - File not written - IOException e");
+            }
         }
+
+
     }
 
     public void getPermissions(){
@@ -213,7 +230,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         gMap = googleMap;
 
-        // Add a marker in Sydney and move the camera
+        // Add a marker in Wichita and move the camera
+        //TODO: make the camera move to user's current location, not Wichita
+        //TODO: make the camera zoom in
         LatLng wichita = new LatLng(37.6913, 262.6503);
         gMap.moveCamera(CameraUpdateFactory.newLatLng(wichita));
 
@@ -227,7 +246,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     //when location changes, display accuracy of that reading
                     //currentLocation = location;
                     if (on) {
-                        //get lat long
+                        //get lat and long
                         currentLongitude = location.getLongitude();
                         currentLatitude = location.getLatitude();
                         //set lat and long into LatLng type variable
