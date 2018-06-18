@@ -62,7 +62,7 @@
         android:id="@+id/btnReset"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/reset"
+        android:text="@string/stop"
         map:layout_constraintBaseline_toBaselineOf="@+id/btnStartStop"
         map:layout_constraintEnd_toStartOf="@+id/btnViewData"
         map:layout_constraintHorizontal_bias="0.5"
