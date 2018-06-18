@@ -79,7 +79,8 @@ public class ViewData extends AppCompatActivity {
             inStream.close();   //close file
         } catch (FileNotFoundException e) { //catch exceptions
             e.printStackTrace();
-            TV2.setText("File not found");
+            TV2.setText("");
+            Toast.makeText(this, "File not found", Toast.LENGTH_LONG).show();
         } catch (IOException e) {
             e.printStackTrace();
             TV2.setText("error reading file - cannot read in lines");

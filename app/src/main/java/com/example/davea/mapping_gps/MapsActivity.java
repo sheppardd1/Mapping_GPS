@@ -85,6 +85,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        if(UPDATE_INTERVAL < 1000){
+            Toast.makeText(this, "WARNING: UPDATE-INTERVAL IS TOO LOW\nIT MUST BE >= 1000 IN ORDER FOR THIS APP TO FUNCTION AS INTENDED", Toast.LENGTH_LONG).show();
+        }
 
         setup();
 
@@ -116,7 +119,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         sum += dataArray[i];
                     }
                     average = sum / ((float)numPins);
-                    TV.setText("RESET\naverage accuracy: " + average);
+                    TV.setText("RESET");
                     reset();
                     gMap.clear();
                 }
@@ -127,10 +130,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         viewData.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(new Intent(getApplicationContext(), ViewData.class));
+                if(!on) startActivity(new Intent(getApplicationContext(), ViewData.class));
             }
         });
-
     }
 
 
@@ -149,7 +151,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         reset = findViewById(R.id.btnReset);
         viewData = findViewById(R.id.btnViewData);
         TV = findViewById(R.id.TV);
-        TV.setText("Press START to begin");
+        if(UPDATE_INTERVAL < 1000){
+            TV.setText("WARNING: UPDATE_INTERVAL IS TOO LOW\nIT MUST BE >= 1000 IN ORDER FOR THIS APP TO FUNCTION AS INTENDED");
+        }else TV.setText("Press START to begin");
 
         //create file
         dataFile = new File(filename);
@@ -191,7 +195,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             fileContents += "\nAverage: " + average + "\n\n"; //write the average and add some endlines
             try {   //write file
                 outputStream.write(fileContents.getBytes());    //write fileContents into file
-                TV.setText(TV.getText() + "\nFile Written");
+                TV.setText(TV.getText() + " - File Written");
             } catch (IOException e) {
                 e.printStackTrace();
                 TV.setText(TV.getText() + "\nERROR - File not written - IOException e");
@@ -223,6 +227,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+
+
+    //NOTE: This function executes more times than it should without (numPins == 0 || !(timeArray[numPins - 1].equals(dateFormatTime.format(location.getTime())) )) in place
+    //IMPORTANT: This function will only work as long as UPDATE_INTERVAL >= 1000 because of the above statement's necessity
     public void locationDetails() {
         if(on) {
             locationListener = new LocationListener() {
@@ -230,7 +238,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 public void onLocationChanged(Location location) {
                     //when location changes, display accuracy of that reading
                     //currentLocation = location;
-                    if (on) {
+                    if (on && (numPins == 0 || !(timeArray[numPins - 1].equals(dateFormatTime.format(location.getTime())) ))) {
+                            //note: if numPins == 0, then timeArray[numPins - 1] is an invalid reference, however that
+                            // statement will not be analyzed if numPins == 0, so there is no crash as long as numPins == 0 is analyzed first
                         currentLocation = location;
                         //convert epoch time to calendar data
                         cal.setTimeInMillis(currentLocation.getTime());
@@ -251,6 +261,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         gMap.addMarker(new MarkerOptions().position(currentPosition).title(name));
                         //update camera position
                         gMap.moveCamera(CameraUpdateFactory.newLatLng(currentPosition));
+
                     }
                 }
 
@@ -284,7 +295,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
                 if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     //if permission still not granted, tell user app will not work without it
-                    Toast.makeText(this, "Need GPS permissions for app to function", Toast.LENGTH_LONG);
+                    Toast.makeText(this, "Need GPS permissions for app to function", Toast.LENGTH_LONG).show();
                 }
                 //once permission is granted, set up location listener
                 //updating every UPDATE_INTERVAL milliseconds, regardless of distance change
