@@ -185,7 +185,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             fileContents += " Stop:  " + time + "\n------------------------------\n";
         }
 
-        fileContents += "#" + (i + 1) + ") " + dataArray[i] + "    " + timeArray[i] + "\n";    //set fileContents to number and accuracy value [example: "#1)  9.0"  ]
+        //set fileContents to number, accuracy value, and timestamp [example: "#1)  9.0"  ]
+        fileContents += String.format("%-8s%s" , "#" + (i + 1) + ") ", String.format("%-10s%s", dataArray[i], timeArray[i] + "\n"));
         if(dataArray[i + 1] == null) {  //end of data that must be written is reached
             fileContents += "\nAverage: " + average + "\n\n"; //write the average and add some endlines
             try {   //write file
@@ -196,7 +197,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 TV.setText(TV.getText() + "\nERROR - File not written - IOException e");
             }
         }
-
 
     }
 
