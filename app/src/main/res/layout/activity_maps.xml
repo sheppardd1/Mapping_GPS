@@ -49,13 +49,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
-        android:layout_marginLeft="8dp"
-        android:layout_marginStart="8dp"
         android:text="@string/start_stop"
         map:layout_constraintBottom_toBottomOf="parent"
         map:layout_constraintEnd_toStartOf="@+id/btnReset"
         map:layout_constraintHorizontal_bias="0.5"
         map:layout_constraintStart_toStartOf="parent"
+        map:layout_constraintTop_toBottomOf="@+id/TV"
         tools:layout_conversion_absoluteHeight="65dp"
         tools:layout_conversion_absoluteWidth="360dp" />
 
@@ -63,13 +62,21 @@
         android:id="@+id/btnReset"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginEnd="8dp"
-        android:layout_marginRight="8dp"
         android:text="@string/reset"
+        map:layout_constraintBaseline_toBaselineOf="@+id/btnStartStop"
+        map:layout_constraintEnd_toStartOf="@+id/btnViewData"
+        map:layout_constraintHorizontal_bias="0.5"
+        map:layout_constraintStart_toEndOf="@+id/btnStartStop" />
+
+    <Button
+        android:id="@+id/btnViewData"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/view_data"
         map:layout_constraintBaseline_toBaselineOf="@+id/btnStartStop"
         map:layout_constraintEnd_toEndOf="parent"
         map:layout_constraintHorizontal_bias="0.5"
-        map:layout_constraintStart_toEndOf="@+id/btnStartStop" />
+        map:layout_constraintStart_toEndOf="@+id/btnReset" />
 
 
 </android.support.constraint.ConstraintLayout>

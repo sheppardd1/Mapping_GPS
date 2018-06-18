@@ -1,6 +1,8 @@
 package com.example.davea.mapping_gps;
 
 import android.Manifest;
+import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationListener;
@@ -21,6 +23,8 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
@@ -34,27 +38,38 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LocationListener locationListener;
 
     //Constants:
-    final int UPDATE_INTERVAL = 2000;   //when on, update location data every UPDATE_INTERVAL milliseconds
+    final int UPDATE_INTERVAL = 3000;   //when on, update location data every UPDATE_INTERVAL milliseconds
+    final int ARRAY_SIZE = 10000;
+    final String filename = "GPS_data.txt";
 
     //UI:
-    Button start, reset;
+    Button start, reset, viewData;
     TextView TV;
 
     //variables:
     public boolean on = false;
     double currentLongitude;
     double currentLatitude;
-    LatLng currentPosition[] = new LatLng[10000];
-    int numPins = 0;
+    LatLng currentPosition;
+    public int numPins = 0;
     String name = "X";
-/*
+    Float dataArray[] = new Float[ARRAY_SIZE];
+    String fileContents;
+    boolean wasReset = true;
+    String time;
+    String timeArray[] = new String[ARRAY_SIZE];
+
+
     //Time:
     //create calendar to convert epoch time to readable time
     Calendar cal = Calendar.getInstance();
     //create simple date format to show just 12hr time
-    SimpleDateFormat dateFormat = new SimpleDateFormat("hh:mm:ss aa");
-*/
+    //SimpleDateFormat dateFormatTime = new SimpleDateFormat("hh:mm aa");
+    //SimpleDateFormat dateFormatDayAndTime = new SimpleDateFormat("MM, dd YYYY hh:mm aa");
 
+
+//TODO: check for read and write permissions - needed for newer android versions
+//TODO: change dataArray and # to a map
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -73,10 +88,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View v) {
                 on = !on;
                 if(on) {
-                    TV.setText("running");
+                    TV.setText("RUNNING");
                     locationDetails();
+                    if(wasReset){
+                        wasReset = false;
+                        //convert epoch time to calendar data
+                        //cal.setTimeInMillis(currentLocation.getTime());
+                        //print accuracy value on screen along with coordinates and time
+                        //time = dateFormatDayAndTime.format(cal.getTime());
+                    }
                 }
-                else TV.setText("paused");
+                else TV.setText("PAUSED");
             }
         });
 
@@ -85,12 +107,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View v) {
                 if(on){
                     on = false;
-                    TV.setText("paused - press again to reset");
+                    TV.setText("PAUSED - press again to reset");
                 }
-                else {
-                    TV.setText("reset");
+                else if (numPins != 0) {    //if numPins == 0, then it does not need to be reset because it's already empty
+                    long sum = (long) 0.0;
+                    for(int i = 0; i < numPins; i++){
+                        sum += dataArray[i];
+                    }
+                    float average = sum / ((float)numPins);
+                    TV.setText("RESET\naverage accuracy: " + average);
+                    reset();
                     gMap.clear();
-                }
+                }//(else numPins == 0 && !on)
+                else TV.setText("RESET");
+            }
+        });
+
+        viewData.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(getApplicationContext(), ViewData.class));
             }
         });
 
@@ -98,11 +134,48 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     public void setup(){
+        for(int i = 0; i < ARRAY_SIZE; i++) {
+            dataArray[i] = null;
+        }
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         start = findViewById(R.id.btnStartStop);
         reset = findViewById(R.id.btnReset);
+        viewData = findViewById(R.id.btnViewData);
         TV = findViewById(R.id.TV);
         TV.setText("Press START to begin");
+    }
+
+    public void reset(){
+        for (int i = 0; i < ARRAY_SIZE && dataArray[i] != null; i++){
+            writeData(dataArray[i], i);
+            dataArray[i] = null;
+        }
+        numPins = 0;
+        wasReset = true;
+    }
+
+    public void writeData(float input, int i){
+        if(i == 0) {    //print time range of data points as header of data
+            fileContents += "-----------------------\n\n" + time + " to ";
+            //convert epoch time to calendar data
+            //cal.setTimeInMillis(currentLocation.getTime());
+            //print accuracy value on screen along with coordinates and time
+            //time = dateFormatDayAndTime.format(cal.getTime());
+            fileContents += time + "\n-----------------------\n";
+        }
+
+        fileContents += "#" + (i + 1) + ")  " + dataArray[i] + "\n";    //set fileContents to number and accuracy value [example: "#1)  9.0"  ]
+
+        FileOutputStream outputStream;
+
+        try {
+            outputStream = openFileOutput(filename, Context.MODE_PRIVATE);  //open file and set to output stream
+            outputStream.write(fileContents.getBytes());    //write fileContents into file
+            outputStream.close();   //close file - this is inefficient, but works for now, see below
+            //TODO: only open and close file once, not every time this function is activated
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void getPermissions(){
@@ -154,14 +227,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     //when location changes, display accuracy of that reading
                     //currentLocation = location;
                     if (on) {
+                        //get lat long
                         currentLongitude = location.getLongitude();
                         currentLatitude = location.getLatitude();
-                        currentPosition[numPins] = new LatLng(currentLatitude, currentLongitude);
-                        setName(location);
-                        gMap.addMarker(new MarkerOptions().position(currentPosition[numPins]).title(name));
-                        gMap.moveCamera(CameraUpdateFactory.newLatLng(currentPosition[numPins]));
-                        numPins++;
-                        //drawMarker(location);
+                        //set lat and long into LatLng type variable
+                        currentPosition = new LatLng(currentLatitude, currentLongitude);
+                        //put accuracy value into array
+                        dataArray[numPins] = location.getAccuracy();
+                        //get time stamp
+                        //cal.setTimeInMillis(currentLocation.getTime());
+                        //timeArray[numPins] = dateFormatDayAndTime.format(cal.getTime());
+                        //set label for marker
+                        name = (dataArray[numPins] + " #" + (++numPins));
+                        //add marker
+                        gMap.addMarker(new MarkerOptions().position(currentPosition).title(name));
+                        //update camera position
+                        gMap.moveCamera(CameraUpdateFactory.newLatLng(currentPosition));
                     }
                 }
 
@@ -196,12 +277,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     included in this Location. If this location does not have a horizontal accuracy, then 0.0
     is returned. All locations generated by the LocationManager include horizontal accuracy."
      */
-    public void setName(Location currentLocation){
-        //convert epoch time to calendar data
-        //cal.setTimeInMillis(currentLocation.getTime());
-        //print accuracy value on screen along with coordinates and time
-        name = ("" + currentLocation.getAccuracy());
-    }
 
 /*
     private void drawMarker(Location location) {
