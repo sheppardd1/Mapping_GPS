@@ -65,13 +65,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     String timeArray[] = new String[ARRAY_SIZE_MAX];
     float average = -999;
 
-
     //Time:
     //create calendar to convert epoch time to readable time
-    Calendar cal = Calendar.getInstance();
+    Calendar cal;
     //create simple date format to show just 12hr time
-    //SimpleDateFormat dateFormatTime = new SimpleDateFormat("hh:mm aa");
-    //SimpleDateFormat dateFormatDayAndTime = new SimpleDateFormat("MM, dd YYYY hh:mm aa");
+    SimpleDateFormat dateFormatTime;
+    SimpleDateFormat dateFormatDayAndTime;
 
 
 //TODO: check for read and write permissions - needed for newer android versions
@@ -98,10 +97,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     locationDetails();
                     if(wasReset){
                         wasReset = false;
-                        //convert epoch time to calendar data
-                        //cal.setTimeInMillis(currentLocation.getTime());
-                        //print accuracy value on screen along with coordinates and time
-                        //time = dateFormatDayAndTime.format(cal.getTime());
                     }
                 }
                 else TV.setText("PAUSED");
@@ -124,8 +119,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     TV.setText("RESET\naverage accuracy: " + average);
                     reset();
                     gMap.clear();
-                }//(else numPins == 0 && !on)
-                else TV.setText("RESET");
+                }
+                else TV.setText("RESET"); //(else numPins == 0 && !on)
             }
         });
 
@@ -140,8 +135,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     public void setup(){
+
+        cal = Calendar.getInstance();
+        dateFormatTime = new SimpleDateFormat("hh:mm:ss aa");
+        dateFormatDayAndTime = new SimpleDateFormat("MMM dd, yyyy hh:mm aa");
+
         for(int i = 0; i < ARRAY_SIZE_MAX; i++) {
             dataArray[i] = null;
+            timeArray[i] = null;
         }
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         start = findViewById(R.id.btnStartStop);
@@ -161,6 +162,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             for (int i = 0; dataArray[i] != null && i < ARRAY_SIZE_MAX; i++){
                 writeData(i, outputStream);
                 dataArray[i] = null;
+                timeArray[i] = null;
             }
             outputStream.close(); //close file
         } catch (Exception e) {
@@ -173,16 +175,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void writeData(int i, FileOutputStream outputStream){
         if(i == 0) {    //print time range of data points as header of data
-            if(fileContents != null) fileContents += "-----------------------\n" + time + " to ";
-            else fileContents = "-----------------------\n" + time + " to ";    //if file was empty to begin with, we don't want to print out "null" at the beginning
+            if(fileContents != null) fileContents += "------------------------------\n Start: " + time + "\n";
+            //if file was empty to begin with, we don't want to print out "null" at the beginning
+            else fileContents = "------------------------------\n Start: " + time + "\n";
             //convert epoch time to calendar data
-            //cal.setTimeInMillis(currentLocation.getTime());
+            cal.setTimeInMillis(currentLocation.getTime());
             //print accuracy value on screen along with coordinates and time
-            //time = dateFormatDayAndTime.format(cal.getTime());
-            fileContents += time + "\n-----------------------\n";
+            time = dateFormatDayAndTime.format(cal.getTime());
+            fileContents += " Stop:  " + time + "\n------------------------------\n";
         }
 
-        fileContents += "#" + (i + 1) + ")  " + dataArray[i] + "\n";    //set fileContents to number and accuracy value [example: "#1)  9.0"  ]
+        fileContents += "#" + (i + 1) + ") " + dataArray[i] + "    " + timeArray[i] + "\n";    //set fileContents to number and accuracy value [example: "#1)  9.0"  ]
         if(dataArray[i + 1] == null) {  //end of data that must be written is reached
             fileContents += "\nAverage: " + average + "\n\n"; //write the average and add some endlines
             try {   //write file
@@ -197,27 +200,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    public void getPermissions(){
-        //if at least Marshmallow, need to ask user's permission to get GPS data
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            //if permission is not yet granted, ask for it
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
-                if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    //if permission still not granted, tell user app will not work without it
-                    Toast.makeText(this, "Need GPS permissions for app to function", Toast.LENGTH_LONG);
-                }
-                //once permission is granted, set up location listener
-                //updating every UPDATE_INTERVAL milliseconds, regardless of distance change
-                else locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
-            }
-            else locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
-        }
-        else {
-            assert locationManager != null;
-            locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
-        }
-    }
+
 
     /**
      * Manipulates the map once available.
@@ -248,6 +231,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     //when location changes, display accuracy of that reading
                     //currentLocation = location;
                     if (on) {
+                        currentLocation = location;
+                        //convert epoch time to calendar data
+                        cal.setTimeInMillis(currentLocation.getTime());
+                        time = dateFormatDayAndTime.format(cal.getTime());
                         //get lat and long
                         currentLongitude = location.getLongitude();
                         currentLatitude = location.getLatitude();
@@ -257,7 +244,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         dataArray[numPins] = location.getAccuracy();
                         //get time stamp
                         //cal.setTimeInMillis(currentLocation.getTime());
-                        //timeArray[numPins] = dateFormatDayAndTime.format(cal.getTime());
+                        timeArray[numPins] = dateFormatTime.format(location.getTime());
                         //set label for marker
                         name = (dataArray[numPins] + " #" + (++numPins));
                         //add marker
@@ -286,6 +273,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             getPermissions();
         }
 
+    }
+
+
+    public void getPermissions(){
+        //if at least Marshmallow, need to ask user's permission to get GPS data
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            //if permission is not yet granted, ask for it
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
+                if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    //if permission still not granted, tell user app will not work without it
+                    Toast.makeText(this, "Need GPS permissions for app to function", Toast.LENGTH_LONG);
+                }
+                //once permission is granted, set up location listener
+                //updating every UPDATE_INTERVAL milliseconds, regardless of distance change
+                else locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
+            }
+            else locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
+        }
+        else {
+            assert locationManager != null;
+            locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
+        }
     }
 
     /*
