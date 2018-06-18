@@ -59,7 +59,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public int numPins = 0;
     String name = "X";
     Float dataArray[] = new Float[ARRAY_SIZE_MAX];
-    String fileContents;
+    static String fileContents;
     boolean wasReset = true;
     String time;
     String timeArray[] = new String[ARRAY_SIZE_MAX];
@@ -158,7 +158,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         FileOutputStream outputStream;
         try {
             outputStream = openFileOutput(filename, Context.MODE_PRIVATE);  //open file and set to output stream
-            for (int i = 0; i < ARRAY_SIZE_MAX && dataArray[i] != null; i++){
+            for (int i = 0; dataArray[i] != null && i < ARRAY_SIZE_MAX; i++){
                 writeData(i, outputStream);
                 dataArray[i] = null;
             }
