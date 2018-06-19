@@ -304,6 +304,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         if(numPins < ARRAY_SIZE_MAX) {  //if arrays are not full, write to them
                             //put accuracy value into array
                             dataArray[numPins] = location.getAccuracy();
+                            TV.setText("Running - " + dataArray[numPins]);
                             //get time stamp
                             timeArray[numPins] = dateFormatTime.format(location.getTime());
                             //set label for marker (accuracy and marker number)
