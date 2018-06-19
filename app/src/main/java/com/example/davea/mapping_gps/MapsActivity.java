@@ -79,7 +79,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     SimpleDateFormat dateFormatDayAndTime;
 
 
-//TODO: test on a real Android Marshmallow or above
+//TODO: test on a real Android Marshmallow or above device
     //Note: this app has not yet been tested above API 21 except in the emulator, so much of the getPermission() function has not been tested o n real device
 
     @Override
@@ -108,7 +108,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     if (wasReset) { //set wasReset to false
                         wasReset = false;
                     }
-                } else TV.setText("PAUSED");    //if not on after pressing start, session must be paused
+                } else {
+                    TV.setText("PAUSED");    //if not on after pressing start, session must be paused
+                }
             }
         });
 
@@ -183,6 +185,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         numPins = 0;
         wasReset = true;
         setStartTime = false;
+        locationManager.removeUpdates(locationListener);
+        locationPermissionGranted = false; // ensures that locationManager is restarted by forcing locationDetails() to call getPermissions()
     }
 
     public void writeData(int i, FileOutputStream outputStream) {
@@ -304,7 +308,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         if(numPins < ARRAY_SIZE_MAX) {  //if arrays are not full, write to them
                             //put accuracy value into array
                             dataArray[numPins] = location.getAccuracy();
-                            TV.setText("Running - " + dataArray[numPins]);
+                            TV.setText("Running - #" + (numPins + 1) + " - " + dataArray[numPins]);
                             //get time stamp
                             timeArray[numPins] = dateFormatTime.format(location.getTime());
                             //set label for marker (accuracy and marker number)
