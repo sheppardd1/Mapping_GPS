@@ -360,11 +360,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
                 //once permission is granted, set up location listener
                 //updating every UPDATE_INTERVAL milliseconds, regardless of distance change
-                else locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
+                else{
+                    locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
+                    locationPermissionGranted = true;
+                }
+            }
+            else {
+                locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
                 locationPermissionGranted = true;
             }
-            else locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
-            locationPermissionGranted = true;
+
         }
         else {
             assert locationManager != null;
