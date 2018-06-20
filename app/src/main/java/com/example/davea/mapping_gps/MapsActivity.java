@@ -22,8 +22,10 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.io.File;
@@ -313,8 +315,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                             timeArray[numPins] = dateFormatTime.format(location.getTime());
                             //set label for marker (accuracy and marker number)
                             markerLabel = (dataArray[numPins] + " #" + (++numPins));
+                            //create instance of MarkerOptions
+                            MarkerOptions markerOptions = new MarkerOptions();
+                            //set marker options:
+                            markerOptions.position(currentPosition);    //location of marker
+                            markerOptions.title(markerLabel);   //label for marker
+                            if(dataArray[numPins - 1] < 10) {   //if small error margin, marker is green
+                                //note: numPins was previously incremented, so use numPins-1 as index
+                                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+                            }
+                            else if (dataArray[numPins - 1] < 25)   //if 10 <= accuracy < 25, yellow marker
+                            {
+                                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW));
+                            }
+                            else if (dataArray[numPins - 1] < 100){   //else red marker for 25 <= accuracy < 100
+                                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+                            }
+                            else { //else if accuracy >= 100
+                                markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN));
+                            }
                             //add marker
-                            gMap.addMarker(new MarkerOptions().position(currentPosition).title(markerLabel));
+                            gMap.addMarker(markerOptions);
                             //update camera position
                             gMap.moveCamera(CameraUpdateFactory.newLatLng(currentPosition));
                         }
