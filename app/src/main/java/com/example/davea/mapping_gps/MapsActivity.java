@@ -40,7 +40,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public GoogleMap gMap;
 
     //Constants:
-    final int UPDATE_INTERVAL = 3000;   //when on, update location data every UPDATE_INTERVAL milliseconds
+    //final int UPDATE_INTERVAL = 3000;   //when on, update location data every UPDATE_INTERVAL milliseconds
     final int ARRAY_SIZE_MAX = 10000;   //max size of dataArray and timeArray. Process is stopped and warning shown is array size is exceeded in locationDetails()
     static final String filename = "GPS_data.txt";  //name of file where data is saved
 
@@ -72,6 +72,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public boolean on = false;  //true if session is running, not paused or stopped
     boolean zoomed = false; //true if camera has zoomed in on location yet
     boolean locationPermissionGranted = false;  //true once location permission is granted. Used to ensure that location updates are only requested once
+    static boolean setInterval = false; //true if user has specified GPS refresh rate
+    static int interval = 0;    //refresh rate of GPS
 
     //Time:
     //create calendar to convert epoch time to readable time
@@ -93,11 +95,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        if (UPDATE_INTERVAL < 1000) {
-            Toast.makeText(this, "WARNING: UPDATE-INTERVAL IS TOO LOW\nIT MUST BE >= 1000 IN ORDER FOR THIS APP TO FUNCTION AS INTENDED", Toast.LENGTH_LONG).show();
-        }
-
         setup();
+
+        if (interval == 0 && setInterval) {
+            Toast.makeText(this, "WARNING: UPDATE INTERVAL IS SET TO 0.\n(CONTINUOUS UPDATES)\nTHIS MAY RESULT IN HIGH POWER CONSUMPTION", Toast.LENGTH_LONG).show();
+        }
 
         start.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -144,6 +146,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     public void setup() {
+
+        if(!setInterval) {
+            startActivity(new Intent(getApplicationContext(), GetInterval.class));
+        }
+
+        final int UPDATE_INTERVAL = interval;
 
         cal = Calendar.getInstance();   //instantiate a calendar
         //define the data formats
@@ -206,7 +214,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         //set fileContents to number, accuracy value, and timestamp [example: "#1)  9.0"  ] with fancy formatting
-        fileContents += String.format("%-8s%s", "#" + (i + 1) + ") ", String.format("%-10s%s", dataArray[i], timeArray[i] + "\n"));
+        fileContents += ("#" + (i + 1) + ") \t\t" +(dataArray[i] + " \t\t" + timeArray[i] + "\n"));
         if (dataArray[i + 1] == null) {  //end of data that must be written is reached
             fileContents += "\nAverage: " + average + "\n\n"; //write the average and add some endlines
             try {   //write file
@@ -246,7 +254,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 //once permission is granted, set up location listener
                 //updating every UPDATE_INTERVAL milliseconds, regardless of distance change
                 else
-                    locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
+                    locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
                     locationPermissionGranted = true;
                 return;
             }
@@ -382,19 +390,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 //once permission is granted, set up location listener
                 //updating every UPDATE_INTERVAL milliseconds, regardless of distance change
                 else{
-                    locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
+                    locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
                     locationPermissionGranted = true;
                 }
             }
             else {
-                locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
+                locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
                 locationPermissionGranted = true;
             }
 
         }
         else {
             assert locationManager != null;
-            locationManager.requestLocationUpdates("gps", UPDATE_INTERVAL, 0, locationListener);
+            locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
             locationPermissionGranted = true;
         }
     }

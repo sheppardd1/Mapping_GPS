@@ -1,11 +1,12 @@
 <resources>
-    <string name="app_name">Mapping_GPS</string>
+    <string name="app_name">GPS Map</string>
     <string name="title_activity_maps">Map</string>
     <string name="start">Start</string>
     <string name="save">save</string>
     <string name="view_data">View Data</string>
     <string name="title_activity_view_data">ViewData</string>
     <string name="resetFile">Delete File</string>
-    <string name="export">Export</string>
+    <string name="copy">Copy</string>
     <string name="Settings">Settings</string>
+    <string name="share">Share</string>
 </resources>

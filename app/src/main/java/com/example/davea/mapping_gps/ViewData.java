@@ -3,6 +3,11 @@ package com.example.davea.mapping_gps;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Environment;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.method.ScrollingMovementMethod;
@@ -13,8 +18,10 @@ import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
@@ -29,6 +36,10 @@ public class ViewData extends AppCompatActivity {
     TextView TV2;
     Button btnDelete;
     Button btnExport;
+    Button btnEmail;
+
+    String fileContents;
+    boolean fileExists = true;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -42,20 +53,36 @@ public class ViewData extends AppCompatActivity {
         btnDelete.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                deleteFile(MapsActivity.filename);   //delete the file
-                TV2.setText("");    //clear TV2
-                MapsActivity.fileContents = null;   //clear contents of fileContents so that it is not rewritten next time new data is added to the file
-                Toast.makeText(ViewData.this, "File Deleted", Toast.LENGTH_SHORT).show();   //after user file is deleted, display toast saying so
+                if(fileExists) {   //check to see if there is a file before trying to delete it
+                    getDeleteConfirmation();    //only delete after confirming
+                }
+                else Toast.makeText(ViewData.this, "ERROR: File not found", Toast.LENGTH_SHORT).show();
             }
         });
 
         btnExport.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);    //instantiate clipboard manager
-                ClipData clip = ClipData.newPlainText("clip", TV2.getText());  //copy data from textview into clipboard
-                clipboard.setPrimaryClip(clip); //set as a clip
-                Toast.makeText(ViewData.this, "Copied to Clipboard", Toast.LENGTH_SHORT).show();    //tell user text is copied to clipboard
+                if(fileExists) {//check to see if there is a file
+                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);    //instantiate clipboard manager
+                    ClipData clip = ClipData.newPlainText("clip", TV2.getText());  //copy data from textview into clipboard
+                    if (clipboard != null) {    //ensure clipboard exists
+                        clipboard.setPrimaryClip(clip); //set as a clip
+                    }
+                    else{   //warn if clipboard does not exist
+                        Toast.makeText(ViewData.this, "ERROR: Clipboard not available", Toast.LENGTH_SHORT).show();
+                    }
+                    Toast.makeText(ViewData.this, "Copied to Clipboard", Toast.LENGTH_SHORT).show();    //tell user text is copied to clipboard
+                }
+                else Toast.makeText(ViewData.this, "ERROR: File not found", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        btnEmail.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {//check to see if there is a file
+                if(fileExists) email();
+                else Toast.makeText(ViewData.this, "ERROR: File not found", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -67,6 +94,7 @@ public class ViewData extends AppCompatActivity {
         TV2.setMovementMethod(new ScrollingMovementMethod());
         btnDelete = findViewById(R.id.btnDelete);
         btnExport = findViewById(R.id.export);
+        btnEmail = findViewById(R.id.btnEmail);
     }
 
     void readFile(){
@@ -77,15 +105,69 @@ public class ViewData extends AppCompatActivity {
             String line;    //declare string to read in one line at a time
             while((line = reader.readLine()) != null){
                 TV2.setText(TV2.getText() + line + "\n");   //set textview to output the line
+                fileContents += line;
             }//keep outputting lines until end of file is reached
             inStream.close();   //close file once finished reading through the file
+            fileExists = true; //there is a file
         } catch (FileNotFoundException e) { //catch exceptions
             e.printStackTrace();
             TV2.setText("");
             Toast.makeText(this, "File not found", Toast.LENGTH_LONG).show();
+            fileExists = false;  //there is no file
         } catch (IOException e) {
             e.printStackTrace();
             Toast.makeText(this, "error reading file\ncannot read in lines", Toast.LENGTH_LONG);
         }
     }
+
+    void email(){
+        /*File filelocation = new File(Environment.getExternalStorageDirectory().getAbsolutePath(), MapsActivity.filename);
+        Uri path = Uri.fromFile(filelocation);*/
+        Intent emailIntent = new Intent(Intent.ACTION_SEND);
+        // set the type to 'email'
+        emailIntent.setType("vnd.android.cursor.dir/email");
+        String to[] = {""};
+        emailIntent.putExtra(Intent.EXTRA_EMAIL, to);
+        // the attachment - does nto work
+        //emailIntent.putExtra(Intent.EXTRA_STREAM, path);
+        // the mail subject
+        emailIntent.putExtra(Intent.EXTRA_SUBJECT, "Mapping Data");
+        //send data in body of email becasue attachment reads as empty
+        emailIntent.putExtra(Intent.EXTRA_TEXT, TV2.getText());
+
+        startActivity(Intent.createChooser(emailIntent , "Send email"));
+    }
+
+    void getDeleteConfirmation(){
+        AlertDialog.Builder alert = new AlertDialog.Builder(this);  //instantiate alert box
+        alert.setMessage("Are you sure you want to delete the file?");  //ask question
+        alert.setCancelable(false); //user must respond with option on the dialog box
+
+        alert.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                delete();   //if they click Yes, delete the file
+            }
+        });
+
+        alert.setNegativeButton("No", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                //if no, do nothing
+            }
+        });
+
+        alert.create().show();  //create and display the dialog box
+
+
+    }
+
+    void delete(){
+        deleteFile(MapsActivity.filename);   //delete the file
+        TV2.setText("");    //clear TV2
+        MapsActivity.fileContents = null;   //clear contents of fileContents so that it is not rewritten next time new data is added to the file
+        Toast.makeText(ViewData.this, "File Deleted", Toast.LENGTH_SHORT).show();   //after user file is deleted, display toast saying so
+        fileExists = false; //file is now gone
+    }
+
 }
