@@ -2,7 +2,7 @@
     <string name="app_name">GPS Map</string>
     <string name="title_activity_maps">Map</string>
     <string name="start">Start</string>
-    <string name="save">save</string>
+    <string name="save">Save</string>
     <string name="view_data">View Data</string>
     <string name="title_activity_view_data">ViewData</string>
     <string name="resetFile">Delete File</string>

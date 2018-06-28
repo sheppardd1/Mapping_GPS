@@ -83,8 +83,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     SimpleDateFormat dateFormatDayAndTime;
 
 
-//TODO: test on a real Android Marshmallow or above device
-    //Note: this app has not yet been tested above API 21 except in the emulator, so much of the getPermission() function has not been tested o n real device
+//TODO: Turn Arrays into Linked Lists
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
