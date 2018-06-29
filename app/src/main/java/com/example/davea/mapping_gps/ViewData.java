@@ -46,6 +46,7 @@ public class ViewData extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_view_data);
 
+
         setup();
 
         readFile();
@@ -95,6 +96,12 @@ public class ViewData extends AppCompatActivity {
         btnDelete = findViewById(R.id.btnDelete);
         btnExport = findViewById(R.id.export);
         btnEmail = findViewById(R.id.btnEmail);
+
+
+        //take care of location listener, so there are no duplicate ones when we go back to mapsActivity
+        if (MapsActivity.locationListener != null) {    //if there is a location listener set up, remove it
+            MapsActivity.locationManager.removeUpdates(MapsActivity.locationListener);  //ensures we only have one location listener running at once. Don't want duplicate data.
+        }
     }
 
     void readFile(){

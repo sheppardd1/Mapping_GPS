@@ -31,6 +31,9 @@ public class GetInterval extends AppCompatActivity {
                     MapsActivity.interval = Integer.valueOf(interval_input.getText().toString()); //set interval to value specified in interval_input
                     MapsActivity.interval *= 1000;  //convert seconds into milliseconds
                     MapsActivity.setInterval = true;    //ensures that this activity only runs once
+                    if (MapsActivity.locationListener != null) {    //if there is a location listener set up, remove it
+                        MapsActivity.locationManager.removeUpdates(MapsActivity.locationListener);  //ensures we only have one location listener running at once. Don't want duplicate data.
+                    }
                     //go back to main activity
                     startActivity(new Intent(getApplicationContext(), MapsActivity.class));
                 }

@@ -45,14 +45,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //Location:
     public Location currentLocation;
-    LocationManager locationManager;
-    LocationListener locationListener;
+    static LocationManager locationManager;
+    static LocationListener locationListener;
 
     //Files:
     File dataFile;
 
     //UI:
-    Button start, reset, viewData;  //self-explanatory buttons
+    Button start, save, viewData;  //self-explanatory buttons
     TextView TV;    //only textview
 
     //variables:
@@ -114,12 +114,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         });
 
-        reset.setOnClickListener(new View.OnClickListener() {
+        save.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (on) {
                     on = false; //paused if currently on
-                    TV.setText("PAUSED - press again to write");
+
+                    if(numPins > 0) { //if data has been recorded
+                        TV.setText("PAUSED - press again to write");
+                    }
+                    else{   //if there is no data thus far
+                        TV.setText("Press START to begin");
+                    }
+
                 } else if (numPins != 0) {      //if data has been collected but was not on
                     long sum = (long) 0.0;  //initialize sum to 0
                     for (int i = 0; i < numPins; i++) { //get sum of all accuracy reading during the session
@@ -162,7 +169,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         //define buttons and textview
         start = findViewById(R.id.btnStartStop);
-        reset = findViewById(R.id.btnReset);
+        save = findViewById(R.id.btnSave);
         viewData = findViewById(R.id.btnViewData);
         TV = findViewById(R.id.TV);
 
@@ -172,20 +179,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void reset() {
-        FileOutputStream outputStream;  //declare output stream
-        try {   //attempt to open and write to file
-            outputStream = openFileOutput(filename, Context.MODE_PRIVATE);  //open file and set to output stream
-            for (int i = 0; i < numPins; i++) {
-                writeData(i, outputStream); //write data
-            }
-            //empty the lists
-            dataList.clear();
-            timeList.clear();
 
-            outputStream.close(); //close file
-        } catch (Exception e) { //if file is not found, catch exception
-            e.printStackTrace();
-            TV.setText("ERROR: \nDATA NOT WRITTEN");  //error message if file not found
+        if(numPins > 0) {//don't bother with this if there is no data to write
+            FileOutputStream outputStream;  //declare output stream
+            try {   //attempt to open and write to file
+                outputStream = openFileOutput(filename, Context.MODE_PRIVATE);  //open file and set to output stream
+
+                for (int i = 0; i < numPins; i++) {
+                    writeData(i, outputStream); //write data
+                }
+                //empty the lists
+                dataList.clear();
+                timeList.clear();
+
+                outputStream.close(); //close file
+            } catch (Exception e) { //if file is not found, catch exception
+                e.printStackTrace();
+                TV.setText("ERROR: \nDATA NOT WRITTEN");  //error message if file not found
+            }
         }
 
         //reset values
@@ -284,7 +295,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     public void locationDetails() {
-        if(on) {
+        if(on && locationListener == null) { //ensures the program is "on" and that there is only one location listener
             locationListener = new LocationListener() { //setting up new location listener
                 @Override
                 public void onLocationChanged(Location location) {
@@ -356,6 +367,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                         //update camera position
                         gMap.moveCamera(CameraUpdateFactory.newLatLng(currentPosition));
+
                     }
                 }
 
