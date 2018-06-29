@@ -154,6 +154,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         dateFormatTime = new SimpleDateFormat("hh:mm:ss aa");
         dateFormatDayAndTime = new SimpleDateFormat("MMM dd, yyyy hh:mm aa");
 
+        //empty the lists
         dataList.clear();
         timeList.clear();
 
@@ -177,6 +178,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             for (int i = 0; i < numPins; i++) {
                 writeData(i, outputStream); //write data
             }
+            //empty the lists
             dataList.clear();
             timeList.clear();
 
@@ -192,6 +194,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setStartTime = false;
         locationManager.removeUpdates(locationListener);
         locationPermissionGranted = false; // ensures that locationManager is restarted by forcing locationDetails() to call getPermissions()
+        zoomed = false;
     }
 
     public void writeData(int i, FileOutputStream outputStream) {
@@ -201,8 +204,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 fileContents += "------------------------------\n Start: " + time + "\n";
             //if file was empty to begin with, we don't want to print out "null" at the beginning, so use "=" instead of "+="
             else fileContents = "------------------------------\n Start: " + time + "\n";
+
             //convert epoch time to calendar data
             cal.setTimeInMillis(currentLocation.getTime());
+
             //print accuracy value on screen along with coordinates and time
             time = dateFormatDayAndTime.format(cal.getTime());
             fileContents += " Stop:  " + time + "\n------------------------------\n";
@@ -308,19 +313,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         //get lat and long
                         currentLongitude = location.getLongitude();
                         currentLatitude = location.getLatitude();
+
                         //set lat and long into LatLng type variable
                         currentPosition = new LatLng(currentLatitude, currentLongitude);
+
+                        //get accuracy and put value into linked list.
                         dataList.add(location.getAccuracy());
+
+                        //display values on screen
                         TV.setText("Running - #" + (numPins + 1) + " - " + location.getAccuracy());
+
                         //get time stamp
                         timeList.add(dateFormatTime.format(location.getTime()));
+
                         //set label for marker (accuracy and marker number)
                         markerLabel = dataList.get(numPins) + " #" + (++numPins);
+
                         //create instance of MarkerOptions
                         MarkerOptions markerOptions = new MarkerOptions();
                         //set marker options:
                         markerOptions.position(currentPosition);    //location of marker
                         markerOptions.title(markerLabel);   //label for marker
+
+                        //set color of marker based on accuracy reading
                         if(dataList.get(numPins - 1) < 10) {   //if small error margin, marker is green
                             //note: numPins was previously incremented, so use numPins-1 as index
                             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
@@ -335,11 +350,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         else { //else if accuracy >= 100
                             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN));
                         }
+
                         //add marker
                         gMap.addMarker(markerOptions);
+
                         //update camera position
                         gMap.moveCamera(CameraUpdateFactory.newLatLng(currentPosition));
-
                     }
                 }
 
