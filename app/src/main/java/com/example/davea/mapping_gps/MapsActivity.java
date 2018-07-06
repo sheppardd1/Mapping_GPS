@@ -66,7 +66,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     String markerLabel = "X";  //label for the marker (accuracy and number of marker example: 3.0 #2)
     String time;    //the time in the dateFormatDayAndTime format (defined later). Used for giving start and end times of each session
     LinkedList<String> timeList = new LinkedList<String>(); //List of all the times that the datapoints were taken
-    boolean wasReset = true;    //true if session data has been reset
+    boolean wasReset = false;    //true if session data has been reset
     boolean setStartTime = false;   //true if start time of session has been set. Ensures that start time is only set at the beginning of a session
     public boolean on = false;  //true if session is running, not paused or stopped
     boolean zoomed = false; //true if camera has zoomed in on location yet
@@ -102,7 +102,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public void onClick(View v) {
                 on = !on;   //invert on. Toggles between start and paused
                 if (on) {
-                    if(wasReset) gMap.clear();  //clear map when starting after a reset
+                    if(wasReset)gMap.clear();  //clear map when starting after a reset
+
                     TV.setText("RUNNING");  //display session status
                     locationDetails();  //get location info
                     if (wasReset) { //set wasReset to false
@@ -253,7 +254,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         gMap = googleMap;   //set gMap to the 'inputted' googleMap
 
         Criteria criteria = new Criteria(); //not completely sure how this works, but it does
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {    //[can't just call getPermissions() here because app would crash if you tried]
             //ensure we have the right permissions
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
@@ -295,7 +296,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     public void locationDetails() {
-        if(on && locationListener == null) { //ensures the program is "on" and that there is only one location listener
+
+        if(on) { //ensures the program is "on"
             locationListener = new LocationListener() { //setting up new location listener
                 @Override
                 public void onLocationChanged(Location location) {
@@ -416,11 +418,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 locationPermissionGranted = true;
             }
 
-        }
-        else {
+        }   //else if below Marshmallow, we don't need to ask special permission
+        else if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
             assert locationManager != null;
             locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
             locationPermissionGranted = true;
+        }
+        else{
+            //if permission still not granted, tell user app will not work without it
+            Toast.makeText(this, "Need GPS permissions for app to function", Toast.LENGTH_LONG).show();
         }
     }
 
