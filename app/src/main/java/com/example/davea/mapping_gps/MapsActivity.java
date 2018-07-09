@@ -81,6 +81,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     SimpleDateFormat dateFormatTime;
     SimpleDateFormat dateFormatDayAndTime;
 
+    //criteria for location:
+    Criteria locationCriteria = new Criteria();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -177,6 +180,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         TV.setText("Press START to begin"); //print starting message in textview
 
         dataFile = new File(filename);//create file
+
+
+        //specify that we want very high accuracy for GPS location reading
+        locationCriteria.setAccuracy(Criteria.ACCURACY_FINE);
+        locationCriteria.setPowerRequirement(Criteria.POWER_HIGH);
+        locationCriteria.setAltitudeRequired(false);
+        locationCriteria.setSpeedRequired(false);
+        locationCriteria.setCostAllowed(true);
+        locationCriteria.setBearingRequired(false);
+        locationCriteria.setHorizontalAccuracy(Criteria.ACCURACY_HIGH);
+        locationCriteria.setVerticalAccuracy(Criteria.ACCURACY_HIGH);
     }
 
     public void reset() {
@@ -266,7 +280,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 //once permission is granted, set up location listener
                 //updating every UPDATE_INTERVAL milliseconds, regardless of distance change
                 else
-                    locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
+                    locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
                     locationPermissionGranted = true;
                 return;
             }
@@ -409,19 +423,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 //once permission is granted, set up location listener
                 //updating every UPDATE_INTERVAL milliseconds, regardless of distance change
                 else{
-                    locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
+                    locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
                     locationPermissionGranted = true;
                 }
             }
             else {
-                locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
+                locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
                 locationPermissionGranted = true;
             }
 
         }   //else if below Marshmallow, we don't need to ask special permission
         else if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
             assert locationManager != null;
-            locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
+            locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
             locationPermissionGranted = true;
         }
         else{
