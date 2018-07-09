@@ -281,6 +281,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 //updating every UPDATE_INTERVAL milliseconds, regardless of distance change
                 else
                     locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
+                    //locationManager.requestLocationUpdates("GPS", interval, 0, locationListener);
                     locationPermissionGranted = true;
                 return;
             }
@@ -424,11 +425,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 //updating every UPDATE_INTERVAL milliseconds, regardless of distance change
                 else{
                     locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
+                    //locationManager.requestLocationUpdates("GPS", interval, 0, locationListener);
                     locationPermissionGranted = true;
                 }
             }
             else {
                 locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
+                //locationManager.requestLocationUpdates("GPS", interval, 0, locationListener);
                 locationPermissionGranted = true;
             }
 
@@ -436,6 +439,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         else if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
             assert locationManager != null;
             locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
+            //locationManager.requestLocationUpdates("GPS", interval, 0, locationListener);
             locationPermissionGranted = true;
         }
         else{
