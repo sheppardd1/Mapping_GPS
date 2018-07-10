@@ -352,7 +352,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         TV.setText("Running - #" + (numPins + 1) + " - " + location.getAccuracy());
 
                         //get time stamp
-                        timeList.add(dateFormatTime.format(location.getTime()));
+                        timeList.add(dateFormatTime.format(System.currentTimeMillis()));
 
                         //set label for marker (accuracy and marker number)
                         markerLabel = dataList.get(numPins) + " #" + (++numPins);
@@ -412,6 +412,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     public void getPermissions(){
+        locationManager.removeUpdates(locationListener);    //ensure no duplicate update requests
         //if at least Marshmallow, need to ask user's permission to get GPS data
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             //if permission is not yet granted, ask for it
