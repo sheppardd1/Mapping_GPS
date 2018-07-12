@@ -73,6 +73,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     boolean locationPermissionGranted = false;  //true once location permission is granted. Used to ensure that location updates are only requested once
     static boolean setInterval = false; //true if user has specified GPS refresh rate
     static int interval = 0;    //refresh rate of GPS
+    static Float trueLat = null;    //inputted correct latitude (see GetInterval Activity)
+    static Float trueLng = null;    //inputted correct longitude (see GetInterval Activity)
+    static boolean setTrueLatLng = false;    //specifies if user inputs true values of lat and long
+    float distanceError[] = new float[3];
+    LinkedList<Float> distanceErrorList = new LinkedList<Float>();
 
     //Time:
     //create calendar to convert epoch time to readable time
@@ -83,6 +88,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //criteria for location:
     Criteria locationCriteria = new Criteria();
+
 
 
     @Override
@@ -237,10 +243,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             //print accuracy value on screen along with coordinates and time
             time = dateFormatDayAndTime.format(cal.getTime());
             fileContents += " Stop:  " + time + "\n------------------------------\n";
+            if(setTrueLatLng) fileContents += "# | Accuracy | Distance Error | Time\n";
+            else fileContents += "# | Accuracy | Time\n";
         }
 
         //set fileContents to number, accuracy value, and timestamp [example: "#1)  9.0"  ] with fancy formatting
-        fileContents += ("#" + (i + 1) + ") \t\t" +(dataList.get(i).toString() + " \t\t" + timeList.get(i) + "\n"));
+        fileContents += ("#" + (i + 1) + ") \t\t" +(dataList.get(i).toString() + " \t\t" + (String.format("%.2f", distanceErrorList.get(i))) + " \t\t" + timeList.get(i) + "\n"));
         if (i == numPins - 1) {  //end of data that must be written is reached
             fileContents += "\nAverage: " + average + "\n\n"; //write the average and add some endlines
             try {   //write file
@@ -249,6 +257,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             } catch (IOException e) {   //catch exception and print warning
                 e.printStackTrace();
                 TV.setText(TV.getText() + "\nERROR - File not written - IOException e");
+                Toast.makeText(this,"ERROR\nFile Not Written", Toast.LENGTH_LONG).show();
             }
         }
 
@@ -341,6 +350,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         //get lat and long
                         currentLongitude = location.getLongitude();
                         currentLatitude = location.getLatitude();
+
+                        //if user inputted the true lat and long, then calculate distance between GPS's location and true coordinates
+                        if(setTrueLatLng) {
+                            location.distanceBetween(trueLat, trueLng, currentLatitude, currentLongitude, distanceError);
+                            distanceErrorList.add(distanceError[0]);
+                        }
 
                         //set lat and long into LatLng type variable
                         currentPosition = new LatLng(currentLatitude, currentLongitude);
