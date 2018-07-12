@@ -11,6 +11,6 @@
     <string name="share">Share</string>
     <string name="lat">(optional) Lat:</string>
     <string name="lng">(optional) Lng:</string>
-    <string name="interval">Interval:</string>
-    <string name="GetInterval_Instructions">"Enter the update interval in seconds\nOptionally:\nEnter the true latitude and longitude"</string>string>
+    <string name="interval">Update Interval:</string>
+    <string name="GetInterval_Instructions">"Enter the update interval in seconds and the true latitude and longitude (optional)"</string>string>
 </resources>

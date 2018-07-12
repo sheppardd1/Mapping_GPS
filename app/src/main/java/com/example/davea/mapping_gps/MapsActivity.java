@@ -243,15 +243,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             //print accuracy value on screen along with coordinates and time
             time = dateFormatDayAndTime.format(cal.getTime());
             fileContents += " Stop:  " + time + "\n------------------------------\n";
-            if(setTrueLatLng) fileContents += "# | Accuracy | Error (m) | Time\n";
-            else fileContents += "# | Accuracy | Time\n";
+            if(setTrueLatLng) fileContents += "#  | Accuracy |  Error (m)  | Time\n";
+            else fileContents += "#  | Accuracy | Time\n";
         }
 
         //set fileContents to number, accuracy value, and timestamp [example: "#1)  9.0"  ] with fancy formatting
         //fileContents += ("#" + (i + 1) + ") \t\t" +(dataList.get(i).toString() + " \t\t" + (String.format("%.2f", distanceErrorList.get(i))) + " \t\t" + timeList.get(i) + "\n"));
         if(setTrueLatLng) {
-            fileContents += String.format("%-5s %s", ((i + 1) + ")"), String.format("%-10s %s", (dataList.get(i).toString()), String.format("%-9s %s", (String.format("%.2f", distanceErrorList.get(i))), (timeList.get(i) + "\n"))));
-            //note: distanceErrorList.get(i) will never be more than 8 digits since the earth's circumference is about 40 million meters, so formatting will never truncate digits
+            fileContents += String.format("%-5s %s", ((i + 1) + ")"), String.format("%-10s %s", (dataList.get(i).toString()), String.format("%-11s %s", (String.format("%.2f", distanceErrorList.get(i))), (timeList.get(i) + "\n"))));
+            //note: distanceErrorList.get(i) will never be more than 11 chars since the earth's circumference is about 40 million meters (XXXXXXXX.XX), so formatting will never truncate digits
         }
         else{
             fileContents += String.format("%-7s %s", ("#" + (i + 1) + ")"), String.format("%-10s %s", (dataList.get(i).toString()), (timeList.get(i) + "\n")));
@@ -259,7 +259,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         if (i == numPins - 1) {  //end of data that must be written is reached
-            fileContents += "\nAverage: " + average + "\n\n"; //write the average and add some endlines
+            fileContents += "\nAverage Accuracy: " + average + "\n\n"; //write the average and add some endlines
             try {   //write file
                 outputStream.write(fileContents.getBytes());    //write fileContents into file
                 TV.setText(TV.getText() + "File Written");
