@@ -243,7 +243,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             //print accuracy value on screen along with coordinates and time
             time = dateFormatDayAndTime.format(cal.getTime());
             fileContents += " Stop:  " + time + "\n------------------------------\n";
-            if(setTrueLatLng) fileContents += "#  | Accuracy |  Error (m)  | Time\n";
+            if(setTrueLatLng) {
+                fileContents += "Lat: " + trueLat + "\n";
+                fileContents += "Lng: " + trueLng + "\n";
+                fileContents += "#  | Accuracy |  Error (m)  | Time\n";
+            }
             else fileContents += "#  | Accuracy | Time\n";
         }
 
