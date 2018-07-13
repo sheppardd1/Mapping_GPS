@@ -65,7 +65,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     static String fileContents; //Stuff that will be written to the file. It is static so that it can be accessed in other activity
     String markerLabel = "X";  //label for the marker (accuracy and number of marker example: 3.0 #2)
     String time;    //the time in the dateFormatDayAndTime format (defined later). Used for giving start and end times of each session
-    LinkedList<String> timeList = new LinkedList<String>(); //List of all the times that the datapoints were taken
+    LinkedList<String> timeList = new LinkedList<>(); //List of all the times that the datapoints were taken
     boolean wasReset = false;    //true if session data has been reset
     boolean setStartTime = false;   //true if start time of session has been set. Ensures that start time is only set at the beginning of a session
     public boolean on = false;  //true if session is running, not paused or stopped
@@ -77,7 +77,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     static Float trueLng = null;    //inputted correct longitude (see GetInterval Activity)
     static boolean setTrueLatLng = false;    //specifies if user inputs true values of lat and long
     float distanceError[] = new float[3];
-    LinkedList<Float> distanceErrorList = new LinkedList<Float>();
+    LinkedList<Float> distanceErrorList = new LinkedList<>();
 
     //Time:
     //create calendar to convert epoch time to readable time
@@ -88,7 +88,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //criteria for location:
     Criteria locationCriteria = new Criteria();
-
 
 
     @Override
@@ -212,6 +211,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 //empty the lists
                 dataList.clear();
                 timeList.clear();
+                distanceErrorList.clear();
 
                 outputStream.close(); //close file
             } catch (Exception e) { //if file is not found, catch exception
