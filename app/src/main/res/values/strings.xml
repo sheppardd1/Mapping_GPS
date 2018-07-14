@@ -13,4 +13,6 @@
     <string name="lng">(optional) Lng:</string>
     <string name="interval">Update Interval:</string>
     <string name="GetInterval_Instructions">"Enter the update interval in seconds and the true latitude and longitude (optional)"</string>string>
+    <string name="GPS">Use GPS Only</string>
+    <string name="fusedLocation">Use Fused Location Services</string>
 </resources>

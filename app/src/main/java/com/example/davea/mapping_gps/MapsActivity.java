@@ -18,6 +18,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -35,7 +36,7 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.LinkedList;
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback  {
 
     //Google Map:
     public GoogleMap gMap;
@@ -56,32 +57,41 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     TextView TV;    //only textview
 
     //variables:
-    double currentLongitude;
-    double currentLatitude;
-    LatLng currentPosition;
+        //double and Double:
+    double currentLongitude;    //current lng
+    double currentLatitude;     //current lat
+    static Double trueLat = null;    //inputted correct latitude (see GetInterval Activity)
+    static Double trueLng = null;    //inputted correct longitude (see GetInterval Activity)
+        //int:
     public int numPins = 0; //number of markers on map
-    LinkedList<Float> dataList = new LinkedList<Float>();
-    float average = -999;   //average of the accuracy readings from one session. Initialize to -999 so any errors are obvious
+    static int interval = 0;    //refresh rate of GPS
+        //float and Float:
+    LinkedList<Float> accuracyList = new LinkedList<>();   //list of accuracy readings
+    LinkedList<Float> distanceErrorList = new LinkedList<>();   //list of distance errors
+    float averageAccuracy = -999;   //average of the accuracy readings from one session. Initialize to -999 so any errors are obvious
+    float averageError = -999;      //average of the true error between given Lat Lng and GPS's Lat Lng
+    float distanceError[] = new float[3];   //values returned when function is called to determine distance between real location and GPS location reading
+        //String:
     static String fileContents; //Stuff that will be written to the file. It is static so that it can be accessed in other activity
     String markerLabel = "X";  //label for the marker (accuracy and number of marker example: 3.0 #2)
     String time;    //the time in the dateFormatDayAndTime format (defined later). Used for giving start and end times of each session
     LinkedList<String> timeList = new LinkedList<>(); //List of all the times that the datapoints were taken
+        //boolean:
     boolean wasReset = false;    //true if session data has been reset
     boolean setStartTime = false;   //true if start time of session has been set. Ensures that start time is only set at the beginning of a session
     public boolean on = false;  //true if session is running, not paused or stopped
     boolean zoomed = false; //true if camera has zoomed in on location yet
     boolean locationPermissionGranted = false;  //true once location permission is granted. Used to ensure that location updates are only requested once
+    boolean paused = false; //only true if paused (not running or stopped). Used to prevent ViewData activity from starting while paused
+    static boolean useFusedLocation; //true if user selects radio button for Fused Location Services, false if selected GPS
     static boolean setInterval = false; //true if user has specified GPS refresh rate
-    static int interval = 0;    //refresh rate of GPS
-    static Double trueLat = null;    //inputted correct latitude (see GetInterval Activity)
-    static Double trueLng = null;    //inputted correct longitude (see GetInterval Activity)
     static boolean setTrueLatLng = false;    //specifies if user inputs true values of lat and long
-    float distanceError[] = new float[3];   //values returned when function is called to determine distance between real location and GPS location reading
-    LinkedList<Float> distanceErrorList = new LinkedList<>();   //list of distance errors
-    boolean paused = false; //only true if paused (not running or stopped)
+        //LatLng:
+    LatLng currentPosition;
+        //Toast:
     Toast myToast = null;
 
-    //Time:
+    //Time formatting:
     //create calendar to convert epoch time to readable time
     Calendar cal;
     //create simple date format to show just 12hr time. Defined later on.
@@ -91,6 +101,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //criteria for location:
     Criteria locationCriteria = new Criteria();
 
+    GoogleApiClient mGoogleApiClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -101,10 +112,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        setup();
+        setup();    //initialize everything
 
         if (interval == 0 && setInterval) {
-            if(myToast != null) myToast.cancel();
+            //if user sets update interval to 0, warn of battery drain
+            if(myToast != null) myToast.cancel();   //if other toasts are up, get rid of them to avoid accumulation
             myToast = Toast.makeText(MapsActivity.this, "WARNING: UPDATE INTERVAL IS SET TO 0." +
                     "\n(CONTINUOUS UPDATES)\nTHIS MAY RESULT IN HIGH POWER CONSUMPTION", Toast.LENGTH_SHORT);
             myToast.show();
@@ -145,11 +157,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                 } else if (numPins != 0) {      //if data has been collected but was not on
                     paused = false;
-                    long sum = (long) 0.0;  //initialize sum to 0
+                    double sum = 0.0;  //initialize sum to 0
                     for (int i = 0; i < numPins; i++) { //get sum of all accuracy reading during the session
-                        sum += dataList.get(i);
+                        sum += accuracyList.get(i);
                     }
-                    average = sum / ((float) numPins); //compute average
+                    averageAccuracy = (float) (sum / ((float) numPins)); //compute average accuracy readings
+
+                    if(setTrueLatLng){
+                        sum = 0.0;  //initialize sum to 0
+                        for (int i = 0; i < numPins; i++) { //get sum of all accuracy reading during the session
+                            sum += distanceErrorList.get(i);
+                        }
+                        averageError = (float) (sum / ((float) numPins)); //compute average error value
+                    }
+
+
                     TV.setText(""); //clear TextView
                     reset();    //reset data values and write to file
                 } else {
@@ -187,7 +209,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         dateFormatDayAndTime = new SimpleDateFormat("MMM dd, yyyy hh:mm aa");
 
         //empty the lists
-        dataList.clear();
+        accuracyList.clear();
         timeList.clear();
         distanceErrorList.clear();
 
@@ -226,19 +248,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     writeData(i, outputStream); //write data
                 }
                 //empty the lists
-                dataList.clear();
+                accuracyList.clear();
                 timeList.clear();
                 distanceErrorList.clear();
 
                 outputStream.close(); //close file
+
             } catch (Exception e) { //if file is not found, catch exception
                 e.printStackTrace();
                 TV.setText("ERROR: \nDATA NOT WRITTEN");  //error message if file not found
             }
         }
         else{
-            //empty the lists anyway (probably not necessary here, but doing it just in case)
-            dataList.clear();
+            //empty the lists (probably not necessary here, but doing it just in case)
+            accuracyList.clear();
             timeList.clear();
             distanceErrorList.clear();
         }
@@ -247,7 +270,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         numPins = 0;
         wasReset = true;
         setStartTime = false;
-        if(locationListener != null) locationManager.removeUpdates(locationListener);
+        if(locationListener != null) locationManager.removeUpdates(locationListener);   //remove location updates (saves battery)
         locationPermissionGranted = false; // ensures that locationManager is restarted by forcing locationDetails() to call getPermissions()
         zoomed = false;
     }
@@ -275,18 +298,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         //set fileContents to number, accuracy value, and timestamp [example: "#1)  9.0"  ] with fancy formatting
-        //fileContents += ("#" + (i + 1) + ") \t\t" +(dataList.get(i).toString() + " \t\t" + (String.format("%.2f", distanceErrorList.get(i))) + " \t\t" + timeList.get(i) + "\n"));
+        //fileContents += ("#" + (i + 1) + ") \t\t" +(accuracyList.get(i).toString() + " \t\t" + (String.format("%.2f", distanceErrorList.get(i))) + " \t\t" + timeList.get(i) + "\n"));
         if(setTrueLatLng) {
-            fileContents += String.format("%-5s %s", ((i + 1) + ")"), String.format("%-10s %s", (dataList.get(i).toString()), String.format("%-11s %s", (String.format("%.2f", distanceErrorList.get(i))), (timeList.get(i) + "\n"))));
+            fileContents += String.format("%-5s %s", ((i + 1) + ")"), String.format("%-10s %s", (accuracyList.get(i).toString()), String.format("%-11s %s", (String.format("%.2f", distanceErrorList.get(i))), (timeList.get(i) + "\n"))));
             //note: distanceErrorList.get(i) will never be more than 11 chars since the earth's circumference is about 40 million meters (XXXXXXXX.XX), so formatting will never truncate digits
         }
         else{
-            fileContents += String.format("%-7s %s", ("#" + (i + 1) + ")"), String.format("%-10s %s", (dataList.get(i).toString()), (timeList.get(i) + "\n")));
+            fileContents += String.format("%-7s %s", ("#" + (i + 1) + ")"), String.format("%-10s %s", (accuracyList.get(i).toString()), (timeList.get(i) + "\n")));
 
         }
 
         if (i == numPins - 1) {  //end of data that must be written is reached
-            fileContents += "\nAverage Accuracy: " + average + "\n\n"; //write the average and add some endlines
+            fileContents += "\nAverage Accuracy Radius: " + String.format("%.2f", averageAccuracy) + "\n"; //write the average accuracy reading
+            if(setTrueLatLng) fileContents += "Average True Error: " + String.format("%.2f", averageError) + "\n\n"; //write the average error value
             try {   //write file
                 outputStream.write(fileContents.getBytes());    //write fileContents into file
                 TV.setText(TV.getText() + "File Written");
@@ -393,7 +417,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                         //if user inputted the true lat and long, then calculate distance between GPS's location and true coordinates
                         if(setTrueLatLng) {
-                            location.distanceBetween(trueLat, trueLng, currentLatitude, currentLongitude, distanceError);
+                            Location.distanceBetween(trueLat, trueLng, currentLatitude, currentLongitude, distanceError);
                             distanceErrorList.add(distanceError[0]);
                         }
 
@@ -401,7 +425,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         currentPosition = new LatLng(currentLatitude, currentLongitude);
 
                         //get accuracy and put value into linked list.
-                        dataList.add(location.getAccuracy());
+                        accuracyList.add(location.getAccuracy());
 
                         //display values on screen
                         TV.setText("Running - #" + (numPins + 1) + " - " + location.getAccuracy());
@@ -410,7 +434,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         timeList.add(dateFormatTime.format(System.currentTimeMillis()));
 
                         //set label for marker (accuracy and marker number)
-                        markerLabel = dataList.get(numPins) + " #" + (++numPins);
+                        markerLabel = accuracyList.get(numPins) + " #" + (++numPins);
 
                         //create instance of MarkerOptions
                         MarkerOptions markerOptions = new MarkerOptions();
@@ -419,15 +443,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         markerOptions.title(markerLabel);   //label for marker
 
                         //set color of marker based on accuracy reading
-                        if(dataList.get(numPins - 1) < 10) {   //if small error margin, marker is green
+                        if(accuracyList.get(numPins - 1) < 10) {   //if small error margin, marker is green
                             //note: numPins was previously incremented, so use numPins-1 as index
                             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
                         }
-                        else if (dataList.get(numPins - 1) < 25)   //if 10 <= accuracy < 25, yellow marker
+                        else if (accuracyList.get(numPins - 1) < 25)   //if 10 <= accuracy < 25, yellow marker
                         {
                             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW));
                         }
-                        else if (dataList.get(numPins - 1) < 100){   //else red marker for 25 <= accuracy < 100
+                        else if (accuracyList.get(numPins - 1) < 100){   //else red marker for 25 <= accuracy < 100
                             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
                         }
                         else { //else if accuracy >= 100
