@@ -73,11 +73,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     boolean locationPermissionGranted = false;  //true once location permission is granted. Used to ensure that location updates are only requested once
     static boolean setInterval = false; //true if user has specified GPS refresh rate
     static int interval = 0;    //refresh rate of GPS
-    static Float trueLat = null;    //inputted correct latitude (see GetInterval Activity)
-    static Float trueLng = null;    //inputted correct longitude (see GetInterval Activity)
+    static Double trueLat = null;    //inputted correct latitude (see GetInterval Activity)
+    static Double trueLng = null;    //inputted correct longitude (see GetInterval Activity)
     static boolean setTrueLatLng = false;    //specifies if user inputs true values of lat and long
-    float distanceError[] = new float[3];
-    LinkedList<Float> distanceErrorList = new LinkedList<>();
+    float distanceError[] = new float[3];   //values returned when function is called to determine distance between real location and GPS location reading
+    LinkedList<Float> distanceErrorList = new LinkedList<>();   //list of distance errors
+    boolean paused = false; //only true if paused (not running or stopped)
+    Toast myToast = null;
 
     //Time:
     //create calendar to convert epoch time to readable time
@@ -102,7 +104,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setup();
 
         if (interval == 0 && setInterval) {
-            Toast.makeText(this, "WARNING: UPDATE INTERVAL IS SET TO 0.\n(CONTINUOUS UPDATES)\nTHIS MAY RESULT IN HIGH POWER CONSUMPTION", Toast.LENGTH_LONG).show();
+            if(myToast != null) myToast.cancel();
+            myToast = Toast.makeText(MapsActivity.this, "WARNING: UPDATE INTERVAL IS SET TO 0." +
+                    "\n(CONTINUOUS UPDATES)\nTHIS MAY RESULT IN HIGH POWER CONSUMPTION", Toast.LENGTH_SHORT);
+            myToast.show();
         }
 
         start.setOnClickListener(new View.OnClickListener() {
@@ -131,12 +136,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
                     if(numPins > 0) { //if data has been recorded
                         TV.setText("PAUSED - press again to write");
+                        paused = true;
                     }
                     else{   //if there is no data thus far
                         TV.setText("Press START to begin");
+                        paused = false;
                     }
 
                 } else if (numPins != 0) {      //if data has been collected but was not on
+                    paused = false;
                     long sum = (long) 0.0;  //initialize sum to 0
                     for (int i = 0; i < numPins; i++) { //get sum of all accuracy reading during the session
                         sum += dataList.get(i);
@@ -144,14 +152,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     average = sum / ((float) numPins); //compute average
                     TV.setText(""); //clear TextView
                     reset();    //reset data values and write to file
-                } else TV.setText("Press START to begin"); //if numPins == 0, then it does not need to be reset because it's already empty
+                } else {
+                    TV.setText("Press START to begin"); //if numPins == 0, then it does not need to be reset because it's already empty
+                    paused = false;
+                }
             }
         });
 
         viewData.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (!on) startActivity(new Intent(getApplicationContext(), ViewData.class));    //go to activity where file contents are viewed
+                if (!on && !paused) startActivity(new Intent(getApplicationContext(), ViewData.class));    //go to activity where file contents are viewed
+                else{
+                    if(myToast != null) myToast.cancel();
+                    myToast = Toast.makeText(MapsActivity.this, "Must stop process before viewing data", Toast.LENGTH_SHORT);
+                    myToast.show();
+                }
             }
         });
     }
@@ -173,6 +189,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //empty the lists
         dataList.clear();
         timeList.clear();
+        distanceErrorList.clear();
 
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE); //set up location manager
 
@@ -219,12 +236,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 TV.setText("ERROR: \nDATA NOT WRITTEN");  //error message if file not found
             }
         }
+        else{
+            //empty the lists anyway (probably not necessary here, but doing it just in case)
+            dataList.clear();
+            timeList.clear();
+            distanceErrorList.clear();
+        }
 
         //reset values
         numPins = 0;
         wasReset = true;
         setStartTime = false;
-        locationManager.removeUpdates(locationListener);
+        if(locationListener != null) locationManager.removeUpdates(locationListener);
         locationPermissionGranted = false; // ensures that locationManager is restarted by forcing locationDetails() to call getPermissions()
         zoomed = false;
     }
@@ -270,7 +293,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             } catch (IOException e) {   //catch exception and print warning
                 e.printStackTrace();
                 TV.setText(TV.getText() + "\nERROR - File not written - IOException e");
-                Toast.makeText(this,"ERROR\nFile Not Written", Toast.LENGTH_LONG).show();
+                if(myToast != null) myToast.cancel();
+                myToast = Toast.makeText(MapsActivity.this, "ERROR\nFile Not Written", Toast.LENGTH_SHORT);
+                myToast.show();
             }
         }
 
@@ -296,7 +321,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
                 if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     //if permission still not granted, tell user app will not work without it
-                    Toast.makeText(this, "Need GPS permissions for app to function", Toast.LENGTH_LONG).show();
+                    if(myToast != null) myToast.cancel();
+                    myToast = Toast.makeText(MapsActivity.this, "Need GPS permissions for app to function", Toast.LENGTH_SHORT);
+                    myToast.show();
                     getPermissions();//Not yet tested here - hopefully this is the right place to put this.
                 }
                 //once permission is granted, set up location listener
@@ -440,7 +467,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     public void getPermissions(){
-        locationManager.removeUpdates(locationListener);    //ensure no duplicate update requests
         //if at least Marshmallow, need to ask user's permission to get GPS data
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             //if permission is not yet granted, ask for it
@@ -448,7 +474,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
                 if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
                     //if permission still not granted, tell user app will not work without it
-                    Toast.makeText(this, "Need GPS permissions for app to function", Toast.LENGTH_LONG).show();
+                    if(myToast != null) myToast.cancel();
+                    myToast = Toast.makeText(MapsActivity.this, "Need GPS permissions for app to function", Toast.LENGTH_SHORT);
+                    myToast.show();
                 }
                 //once permission is granted, set up location listener
                 //updating every UPDATE_INTERVAL milliseconds, regardless of distance change
@@ -473,8 +501,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
         else{
             //if permission still not granted, tell user app will not work without it
-            Toast.makeText(this, "Need GPS permissions for app to function", Toast.LENGTH_LONG).show();
-        }
+            if(myToast != null) myToast.cancel();
+            myToast = Toast.makeText(MapsActivity.this, "Need GPS permissions for app to function", Toast.LENGTH_SHORT);
+            myToast.show();        }
     }
 
     /*
@@ -488,4 +517,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     is returned. All locations generated by the LocationManager include horizontal accuracy."
      */
 
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        reset();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if(locationListener != null) locationManager.removeUpdates(locationListener); //stop location updates, also ensures no duplicate update requests
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if(locationListener != null) locationManager.removeUpdates(locationListener); //stop location updates, also ensures no duplicate update requests
+    }
 }

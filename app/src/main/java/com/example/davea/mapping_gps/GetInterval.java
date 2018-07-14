@@ -11,6 +11,8 @@ import android.widget.Toast;
 
 public class GetInterval extends AppCompatActivity {
 
+    Toast myToast = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -23,7 +25,7 @@ public class GetInterval extends AppCompatActivity {
         Button done = findViewById(R.id.done);
         TextView TV = findViewById(R.id.instructions);
 
-        //print instrucitons
+        //print instructions
         TV.setText(R.string.GetInterval_Instructions);
 
 
@@ -44,20 +46,24 @@ public class GetInterval extends AppCompatActivity {
                     if(lat_input.getText().toString().trim().length() > 0 && lng_input.getText().toString().trim().length() > 0){
                         if(Math.abs(Float.valueOf(lat_input.getText().toString())) > 90)
                         {   //lat values must be between -90 and 90 inclusive
-                            Toast.makeText(GetInterval.this, "Invalid Latitude Value", Toast.LENGTH_SHORT).show();
+                            if(myToast != null) myToast.cancel();
+                            myToast = Toast.makeText(getApplicationContext(), "Invalid Latitude Value", Toast.LENGTH_SHORT);
+                            myToast.show();
                             validValues = false;
                         }
                         else if(Math.abs(Float.valueOf(lng_input.getText().toString())) > 180)
-                        {   //lng vlaues must be between -180 and 180 inclusive
-                            Toast.makeText(GetInterval.this, "Invalid Longitude Value", Toast.LENGTH_SHORT).show();
+                        {   //lng values must be between -180 and 180 inclusive
+                            if(myToast != null) myToast.cancel();
+                            myToast = Toast.makeText(getApplicationContext(), "Invalid Longitude Value", Toast.LENGTH_SHORT);
+                            myToast.show();
                             validValues = false;
                         }
                         else {
                             validValues = true;
                             MapsActivity.setTrueLatLng = true;
                             //set values in MapsActivity
-                            MapsActivity.trueLat = Float.valueOf(lat_input.getText().toString());
-                            MapsActivity.trueLng = Float.valueOf(lng_input.getText().toString());
+                            MapsActivity.trueLat = Double.valueOf(lat_input.getText().toString());
+                            MapsActivity.trueLng = Double.valueOf(lng_input.getText().toString());
                         }
                     }
                     else {  //else did not specify both true lat and long
@@ -70,9 +76,13 @@ public class GetInterval extends AppCompatActivity {
                     }
                 }
                 else{
-                    Toast.makeText(GetInterval.this, "Must Enter Interval Value", Toast.LENGTH_SHORT).show();
+                    if(myToast != null) myToast.cancel();
+                    myToast = Toast.makeText(getApplicationContext(), "Must Enter Interval Value", Toast.LENGTH_SHORT);
+                    myToast.show();
                 }
             }
         });
     }
+
+
 }

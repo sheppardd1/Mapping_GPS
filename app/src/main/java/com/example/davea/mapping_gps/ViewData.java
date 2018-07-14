@@ -41,6 +41,8 @@ public class ViewData extends AppCompatActivity {
     String fileContents;
     boolean fileExists = true;
 
+    Toast myToast = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -57,7 +59,11 @@ public class ViewData extends AppCompatActivity {
                 if(fileExists) {   //check to see if there is a file before trying to delete it
                     getDeleteConfirmation();    //only delete after confirming
                 }
-                else Toast.makeText(ViewData.this, "ERROR: File not found", Toast.LENGTH_SHORT).show();
+                else {
+                    if(myToast != null) myToast.cancel();
+                    myToast = Toast.makeText(getApplicationContext(), "ERROR: File not found", Toast.LENGTH_SHORT);
+                    myToast.show();
+                }
             }
         });
 
@@ -71,11 +77,20 @@ public class ViewData extends AppCompatActivity {
                         clipboard.setPrimaryClip(clip); //set as a clip
                     }
                     else{   //warn if clipboard does not exist
-                        Toast.makeText(ViewData.this, "ERROR: Clipboard not available", Toast.LENGTH_SHORT).show();
+                        if(myToast != null) myToast.cancel();
+                        myToast = Toast.makeText(getApplicationContext(), "ERROR: Clipboard not available", Toast.LENGTH_SHORT);
+                        myToast.show();
+
                     }
-                    Toast.makeText(ViewData.this, "Copied to Clipboard", Toast.LENGTH_SHORT).show();    //tell user text is copied to clipboard
+                    if(myToast != null) myToast.cancel();
+                    myToast = Toast.makeText(getApplicationContext(), "Copied to Clipboard", Toast.LENGTH_SHORT);
+                    myToast.show();
                 }
-                else Toast.makeText(ViewData.this, "ERROR: File not found", Toast.LENGTH_SHORT).show();
+                else {
+                    if(myToast != null) myToast.cancel();
+                    myToast = Toast.makeText(getApplicationContext(), "ERROR: File not found", Toast.LENGTH_SHORT);
+                    myToast.show();
+                }
             }
         });
 
@@ -83,7 +98,11 @@ public class ViewData extends AppCompatActivity {
             @Override
             public void onClick(View v) {//check to see if there is a file
                 if(fileExists) email();
-                else Toast.makeText(ViewData.this, "ERROR: File not found", Toast.LENGTH_SHORT).show();
+                else{
+                    if(myToast != null) myToast.cancel();
+                    myToast = Toast.makeText(getApplicationContext(), "ERROR: File not found", Toast.LENGTH_SHORT);
+                    myToast.show();
+                }
             }
         });
 
@@ -97,11 +116,6 @@ public class ViewData extends AppCompatActivity {
         btnExport = findViewById(R.id.export);
         btnEmail = findViewById(R.id.btnEmail);
 
-
-        //take care of location listener, so there are no duplicate ones when we go back to mapsActivity
-        if (MapsActivity.locationListener != null) {    //if there is a location listener set up, remove it
-            MapsActivity.locationManager.removeUpdates(MapsActivity.locationListener);  //ensures we only have one location listener running at once. Don't want duplicate data.
-        }
     }
 
     void readFile(){
@@ -119,11 +133,15 @@ public class ViewData extends AppCompatActivity {
         } catch (FileNotFoundException e) { //catch exceptions
             e.printStackTrace();
             TV2.setText("");
-            Toast.makeText(this, "File not found", Toast.LENGTH_LONG).show();
+            if(myToast != null) myToast.cancel();
+            myToast = Toast.makeText(getApplicationContext(), "File not found", Toast.LENGTH_SHORT);
+            myToast.show();
             fileExists = false;  //there is no file
         } catch (IOException e) {
             e.printStackTrace();
-            Toast.makeText(this, "error reading file\ncannot read in lines", Toast.LENGTH_LONG);
+            if(myToast != null) myToast.cancel();
+            myToast = Toast.makeText(getApplicationContext(), "error reading file\ncannot read in lines", Toast.LENGTH_SHORT);
+            myToast.show();
         }
     }
 
@@ -173,7 +191,9 @@ public class ViewData extends AppCompatActivity {
         deleteFile(MapsActivity.filename);   //delete the file
         TV2.setText("");    //clear TV2
         MapsActivity.fileContents = null;   //clear contents of fileContents so that it is not rewritten next time new data is added to the file
-        Toast.makeText(ViewData.this, "File Deleted", Toast.LENGTH_SHORT).show();   //after user file is deleted, display toast saying so
+        if(myToast != null) myToast.cancel();
+        myToast = Toast.makeText(getApplicationContext(), "File Deleted", Toast.LENGTH_SHORT);
+        myToast.show();
         fileExists = false; //file is now gone
     }
 
