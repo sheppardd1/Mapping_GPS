@@ -15,4 +15,8 @@
     <string name="GetInterval_Instructions">"Enter the update interval in seconds and the true latitude and longitude (optional)"</string>string>
     <string name="GPS">Use GPS Only</string>
     <string name="fusedLocation">Use Fused Location Services</string>
+    <string name="PressStart">Press START to begin</string>
+    <string name="Paused2">PAUSED - press again to write</string>
+    <string name="Paused">PAUSED</string>
+    <string name="running">RUNNING</string>
 </resources>

@@ -129,13 +129,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if (on) {
                     if(wasReset)gMap.clear();  //clear map when starting after a reset
 
-                    TV.setText("RUNNING");  //display session status
+                    TV.setText(R.string.running);  //display session status
                     locationDetails();  //get location info
                     if (wasReset) { //set wasReset to false
                         wasReset = false;
                     }
                 } else {
-                    TV.setText("PAUSED");    //if not on after pressing start, session must be paused
+                    TV.setText(R.string.Paused);    //if not on after pressing start, session must be paused
                 }
             }
         });
@@ -147,11 +147,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     on = false; //paused if currently on
 
                     if(numPins > 0) { //if data has been recorded
-                        TV.setText("PAUSED - press again to write");
+                        TV.setText(R.string.Paused2);
                         paused = true;
                     }
                     else{   //if there is no data thus far
-                        TV.setText("Press START to begin");
+                        TV.setText(R.string.PressStart);
                         paused = false;
                     }
 
@@ -175,7 +175,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     TV.setText(""); //clear TextView
                     reset();    //reset data values and write to file
                 } else {
-                    TV.setText("Press START to begin"); //if numPins == 0, then it does not need to be reset because it's already empty
+                    TV.setText(R.string.PressStart); //if numPins == 0, then it does not need to be reset because it's already empty
                     paused = false;
                 }
             }
@@ -221,7 +221,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         viewData = findViewById(R.id.btnViewData);
         TV = findViewById(R.id.TV);
 
-        TV.setText("Press START to begin"); //print starting message in textview
+        TV.setText(R.string.PressStart); //print starting message in textview
 
         dataFile = new File(filename);//create file
 
