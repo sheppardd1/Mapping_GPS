@@ -24,6 +24,7 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.SettingsClient;
@@ -114,6 +115,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     public FusedLocationProviderClient myFusedLocationClient;
     LocationRequest myLocationRequest;
+
+    LocationCallback myLocationCallback;
+
+    LocationResult currentLocationResult;
 
 
     @Override
@@ -208,8 +213,56 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
+    /********************************************************************
+     *Activity Functions:
+     ********************************************************************/
 
-    public void setup() {
+    @Override
+    protected void onResume() {
+        super.onResume();
+        reset();
+    }
+
+    @Override
+    protected void onPause() {  //remove location updates when paused
+        super.onPause();
+        //remove updates
+        if(useFusedLocation && myLocationCallback != null){ //if using fused location and myLocaationCallback is not null
+            myFusedLocationClient.removeLocationUpdates(myLocationCallback);
+        }
+        else if(!useFusedLocation && locationListener != null){ //if using GPS only and locationListener is not null
+            locationManager.removeUpdates(locationListener); //stop location updates, also ensures no duplicate update requests
+        }
+        //else methods needed for location have not been instantiated (are still null) so we don't need to remove location updates (if we try, app will crash)
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        //remove updates
+        if(useFusedLocation && myLocationCallback != null){ //if using fused location and myLocaationCallback is not null
+            myFusedLocationClient.removeLocationUpdates(myLocationCallback);
+        }
+        else if(!useFusedLocation && locationListener != null){ //if using GPS only and locationListener is not null
+            locationManager.removeUpdates(locationListener); //stop location updates, also ensures no duplicate update requests
+        }
+        //else methods needed for location have not been instantiated (are still null) so we don't need to remove location updates (if we try, app will crash)
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+        if (myToast != null)
+            myToast.cancel();   //if other toasts are up, get rid of them to avoid accumulation
+        Toast.makeText(this, "GPS Connection Failure", Toast.LENGTH_SHORT);
+        myToast.show();
+    }
+
+
+    /********************************************************************
+     *Functions used regardless of location method:
+     ********************************************************************/
+
+    public void setup() {   //initializes basic vars and UI stuff
 
         if (!setInterval) {
             startActivity(new Intent(getApplicationContext(), GetInterval.class));
@@ -219,6 +272,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         cal = Calendar.getInstance();   //instantiate a calendar
         //define the data formats
+        //not the best method since it may not work in all places outside U.S., but it's good enough for now
         dateFormatTime = new SimpleDateFormat("HH:mm:ss");
         dateFormatDayAndTime = new SimpleDateFormat("MMM dd, yyyy hh:mm aa");
 
@@ -239,19 +293,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         dataFile = new File(filename);//create file
 
-
-        //specify that we want very high accuracy for GPS location reading
-        locationCriteria.setAccuracy(Criteria.ACCURACY_FINE);
-        locationCriteria.setPowerRequirement(Criteria.POWER_HIGH);
-        locationCriteria.setAltitudeRequired(false);
-        locationCriteria.setSpeedRequired(false);
-        locationCriteria.setCostAllowed(true);
-        locationCriteria.setBearingRequired(false);
-        locationCriteria.setHorizontalAccuracy(Criteria.ACCURACY_HIGH);
-        locationCriteria.setVerticalAccuracy(Criteria.ACCURACY_HIGH);
+        if(!useFusedLocation){
+            setCriteria();
+        }
     }
 
-    public void reset() {
+    public void reset() {   //resets all values and calls write function
 
         if (numPins > 0) {//don't bother with this if there is no data to write
             FileOutputStream outputStream;  //declare output stream
@@ -289,7 +336,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         zoomed = false;
     }
 
-    public void writeData(int i, FileOutputStream outputStream) {
+    public void writeData(int i, FileOutputStream outputStream) {   //writes data to a .txt file
         //print header:
         if (i == 0) {    //print time range of data points as header of data
             if (fileContents != null)   //if file already has data in there, use "+=" to add to it
@@ -365,7 +412,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      * installed Google Play services and returned to the app."
      */
     @Override
-    public void onMapReady(GoogleMap googleMap) {
+    public void onMapReady(GoogleMap googleMap) {   //sets up google maps
         gMap = googleMap;   //set gMap to the 'inputted' googleMap
 
         Criteria criteria = new Criteria(); //not completely sure how this works, but it does
@@ -412,10 +459,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-    public void locationDetails() {
+    public void locationDetails() { //chooses which location function to use based on user's choice on location method
 
         if(on) { //ensures the program is "on"
-
             if(useFusedLocation){
                 FusedLocationDetails();
             }
@@ -437,52 +483,56 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     is returned. All locations generated by the LocationManager include horizontal accuracy."
      */
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        reset();
+
+    void addMarker(){   //adds marker to map with label of number, accuracy reading, and color corresponding to accuracy reading
+        //set label for marker (accuracy and marker number)
+        markerLabel = accuracyList.get(numPins) + " #" + (++numPins);
+
+        //create instance of MarkerOptions
+        MarkerOptions markerOptions = new MarkerOptions();
+        //set marker options:
+        markerOptions.position(currentPosition);    //location of marker
+        markerOptions.title(markerLabel);   //label for marker
+
+        //set color of marker based on accuracy reading
+        if(accuracyList.get(numPins - 1) < 10) {   //if small error margin, marker is green
+            //note: numPins was previously incremented, so use numPins-1 as index
+            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
+        }
+        else if (accuracyList.get(numPins - 1) < 25)   //if 10 <= accuracy < 25, yellow marker
+        {
+            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW));
+        }
+        else if (accuracyList.get(numPins - 1) < 100){   //else red marker for 25 <= accuracy < 100
+            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
+        }
+        else { //else if accuracy >= 100
+            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN));
+        }
+
+        //add marker
+        gMap.addMarker(markerOptions);
     }
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if(locationListener != null) locationManager.removeUpdates(locationListener); //stop location updates, also ensures no duplicate update requests
-    }
+    /********************************************************************
+     *Functions for when using GPS only:
+     ********************************************************************/
 
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if(locationListener != null) locationManager.removeUpdates(locationListener); //stop location updates, also ensures no duplicate update requests
-    }
+    void setCriteria(){ //sets criteria for GPS signal
 
-    @Override
-    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
-        myToast.makeText(this, "GPS Connection Failure", Toast.LENGTH_SHORT);
-    }
-
-//setting parameters for fused location requests (if applicable)
-    private void createLocationRequest()
-    {  //   https://github.com/codepath/android_guides/wiki/Retrieving-Location-with-LocationServices-API
-
-        myLocationRequest= new LocationRequest();
-        myLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        myLocationRequest.setInterval(interval);
-        myLocationRequest.setFastestInterval(interval);
-
-        // Create LocationSettingsRequest object using location request
-        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
-        builder.addLocationRequest(myLocationRequest);
-        LocationSettingsRequest locationSettingsRequest = builder.build();
-
-        // Check whether location settings are satisfied
-        // https://developers.google.com/android/reference/com/google/android/gms/location/SettingsClient
-        SettingsClient settingsClient = LocationServices.getSettingsClient(this);
-        settingsClient.checkLocationSettings(locationSettingsRequest);
-
+        //specify that we want very high accuracy for GPS location reading
+        locationCriteria.setAccuracy(Criteria.ACCURACY_FINE);
+        locationCriteria.setPowerRequirement(Criteria.POWER_HIGH);
+        locationCriteria.setAltitudeRequired(false);
+        locationCriteria.setSpeedRequired(false);
+        locationCriteria.setCostAllowed(true);
+        locationCriteria.setBearingRequired(false);
+        locationCriteria.setHorizontalAccuracy(Criteria.ACCURACY_HIGH);
+        locationCriteria.setVerticalAccuracy(Criteria.ACCURACY_HIGH);
     }
 
     //for use when using GPS only
-    void GPSLocationDetails(){
+    void GPSLocationDetails(){  //reads lat lng values, compares them to corret value (if specified), and calls addMarker() to put marker on the map
         locationListener = new LocationListener() { //setting up new location listener
             @Override
             public void onLocationChanged(Location location) {
@@ -551,176 +601,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             @Override
             public void onProviderDisabled(String provider) {
-                //not used right now
+                if(myToast != null) myToast.cancel();
+                myToast = Toast.makeText(MapsActivity.this, "Error: GPS Provider Disabled", Toast.LENGTH_SHORT);
+                myToast.show();
             }
         };
         //if permission is needed, get it
         if (!locationPermissionGranted) getPermissionsFINE();   //ensures that this only executes once after permission is granted
 
-
     }
 
-    //for use when using Fused Loc Serv
-    void FusedLocationDetails(){
-
-        createLocationRequest(); //specify params for fused location request
-
-        getPermissionsCOARSEandFINE();
-
-        locationListener = new LocationListener() { //setting up new location listener\
-            //TODO: maybe not supposed to use locationlistener or onLocationChanged() or something else that's different from normal GPS function
-            //TODO: see   https://github.com/codepath/android_guides/wiki/Retrieving-Location-with-LocationServices-API
-            @Override
-            public void onLocationChanged(Location location) {
-                //when location changes, display accuracy of that reading
-                //currentLocation = location;
-                if (on) {
-                    currentLocation = location; //set current location
-                    if(!setStartTime) { // if start time not yet set
-                        //convert epoch time to calendar data
-                        cal.setTimeInMillis(currentLocation.getTime()); //get time and put into calendar
-                        time = dateFormatDayAndTime.format(cal.getTime());  //format date and time and set to string time
-                        setStartTime = true;    //start time is now set
-                    }
-                    if(!zoomed){   //if map was not previously zoomed in, zoom it in now on current location
-                        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()), 13));
-
-                        CameraPosition cameraPosition = new CameraPosition.Builder()
-                                .target(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()))      // Sets the center of the map to location user
-                                .zoom(18)                   // Set the zoom
-                                .bearing(0)                // Point north
-                                .tilt(0)                   // No tilt
-                                .build();                   // Creates a CameraPosition from the builder
-                        gMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
-                        zoomed = true;  //camera is now zoomed
-                    }
-                    //get lat and long
-                    currentLongitude = location.getLongitude();
-                    currentLatitude = location.getLatitude();
-
-                    //if user inputted the true lat and long, then calculate distance between GPS's location and true coordinates
-                    if(setTrueLatLng) {
-                        Location.distanceBetween(trueLat, trueLng, currentLatitude, currentLongitude, distanceError);
-                        distanceErrorList.add(distanceError[0]);
-                    }
-
-                    //set lat and long into LatLng type variable
-                    currentPosition = new LatLng(currentLatitude, currentLongitude);
-
-                    //get accuracy and put value into linked list.
-                    accuracyList.add(location.getAccuracy());
-
-                    //display values on screen
-                    TV.setText("Running - #" + (numPins + 1) + " - " + location.getAccuracy());
-
-                    //get time stamp
-                    timeList.add(dateFormatTime.format(System.currentTimeMillis()));
-
-                    addMarker();  //add marker to map with label and specific color
-
-                    //update camera position
-                    gMap.moveCamera(CameraUpdateFactory.newLatLng(currentPosition));
-
-                }
-            }
-
-            @Override
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-                //not used right now
-            }
-
-            @Override
-            public void onProviderEnabled(String provider) {
-                //not used right now
-            }
-
-            @Override
-            public void onProviderDisabled(String provider) {
-                //not used right now
-            }
-        };
-
-        //if permission is needed, get it
-        if (!locationPermissionGranted) {//ensures that this only executes once after permission is granted
-            getPermissionsCOARSEandFINE();
-        }
-    }
-
-    void addMarker(){   //adds marker to map with label of number, accuracy reading, and color corresponding to accuracy reading
-        //set label for marker (accuracy and marker number)
-        markerLabel = accuracyList.get(numPins) + " #" + (++numPins);
-
-        //create instance of MarkerOptions
-        MarkerOptions markerOptions = new MarkerOptions();
-        //set marker options:
-        markerOptions.position(currentPosition);    //location of marker
-        markerOptions.title(markerLabel);   //label for marker
-
-        //set color of marker based on accuracy reading
-        if(accuracyList.get(numPins - 1) < 10) {   //if small error margin, marker is green
-            //note: numPins was previously incremented, so use numPins-1 as index
-            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
-        }
-        else if (accuracyList.get(numPins - 1) < 25)   //if 10 <= accuracy < 25, yellow marker
-        {
-            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW));
-        }
-        else if (accuracyList.get(numPins - 1) < 100){   //else red marker for 25 <= accuracy < 100
-            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED));
-        }
-        else { //else if accuracy >= 100
-            markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_CYAN));
-        }
-
-        //add marker
-        gMap.addMarker(markerOptions);
-    }
-
-    void getPermissionsCOARSEandFINE(){ //gets permission to ACCESS_FINE_LOCATION and ACCESS_COARSE_LOCATION
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-
-            //check to see if we have permissions, if not try to get them
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                    ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
-                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
-                requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 0);
-
-                if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    //if permission still not granted, tell user app will not work without it
-                    if(myToast != null) myToast.cancel();
-                    myToast = Toast.makeText(MapsActivity.this, "Need location permissions for app to function", Toast.LENGTH_SHORT);
-                    myToast.show();
-                }
-                //once permission is granted, set up location listener
-                else{
-                    myFusedLocationClient.requestLocationUpdates(myLocationRequest, new LocationCallback(), null);
-                    locationPermissionGranted = true;
-                }
-            }
-            else {
-                myFusedLocationClient.requestLocationUpdates(myLocationRequest, new LocationCallback(), null);
-                locationPermissionGranted = true;
-            }
-
-        }   //else if below Marshmallow, we don't need to ask special permission
-        else if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
-            assert locationManager != null;
-            myFusedLocationClient.requestLocationUpdates(myLocationRequest, new LocationCallback(), null);
-            locationPermissionGranted = true;
-        }
-        else{
-            //if permission still not granted, tell user app will not work without it
-            if(myToast != null) myToast.cancel();
-            myToast = Toast.makeText(MapsActivity.this, "Need location permissions for app to function", Toast.LENGTH_SHORT);
-            myToast.show();
-        }
-        //in future, could make app revert to GPS only if ACCESS_FINE_LOCATION is granted and not ACCESS_COARSE_LOCATION
-    }
-
-
-    public void getPermissionsFINE(){   //gets permission to ACCESS_FINE_LOCATION
+    public void getPermissionsFINE(){   //gets permission to ACCESS_FINE_LOCATION and requests location updates
         //if at least Marshmallow, need to ask user's permission to get GPS data
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             //if permission is not yet granted, ask for it
@@ -760,6 +651,151 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             myToast.show();
         }
     }
+
+
+
+    /********************************************************************
+     *Functions for when using Fused Location Services:
+     ********************************************************************/
+
+    //for use when using Fused Loc Serv
+    void FusedLocationDetails(){    //calls functions to create a location request, get permissions, and request location updates (which takes care of mapping, etc.
+
+        createLocationRequest(); //specify params for fused location request
+
+        //if permission is needed, get it
+        if (!locationPermissionGranted) {//ensures that this only executes once after permission is granted
+            getPermissionsCOARSEandFINE();
+        }
+    }
+
+    //setting parameters for fused location requests (if applicable)
+    private void createLocationRequest()
+    {  //   https://github.com/codepath/android_guides/wiki/Retrieving-Location-with-LocationServices-API
+
+        myLocationRequest= new LocationRequest();
+        myLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        myLocationRequest.setInterval(interval);
+        myLocationRequest.setFastestInterval(interval);
+
+        // Create LocationSettingsRequest object using location request
+        LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
+        builder.addLocationRequest(myLocationRequest);
+        LocationSettingsRequest locationSettingsRequest = builder.build();
+
+        // Check whether location settings are satisfied
+        // https://developers.google.com/android/reference/com/google/android/gms/location/SettingsClient
+        SettingsClient settingsClient = LocationServices.getSettingsClient(this);
+        settingsClient.checkLocationSettings(locationSettingsRequest);
+
+    }
+
+    void getPermissionsCOARSEandFINE(){ //gets permission to ACCESS_FINE_LOCATION and ACCESS_COARSE_LOCATION and then requests location updates
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+
+            //check to see if we have permissions, if not try to get them
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                    ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+
+                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
+                requestPermissions(new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 0);
+
+                if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    //if permission still not granted, tell user app will not work without it
+                    if(myToast != null) myToast.cancel();
+                    myToast = Toast.makeText(MapsActivity.this, "Need location permissions for app to function", Toast.LENGTH_SHORT);
+                    myToast.show();
+                }
+                //once permission is granted, set up location listener
+                else{
+                    myFusedLocationClient.requestLocationUpdates(myLocationRequest, createLocationCallback(), null);
+                    locationPermissionGranted = true;
+                }
+            }
+            else {
+                myFusedLocationClient.requestLocationUpdates(myLocationRequest, createLocationCallback(), null);
+                locationPermissionGranted = true;
+            }
+
+        }   //else if below Marshmallow, we don't need to ask special permission
+        else if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+            assert locationManager != null;
+            myFusedLocationClient.requestLocationUpdates(myLocationRequest, createLocationCallback(), null);
+            locationPermissionGranted = true;
+        }
+        else{
+            //if permission still not granted, tell user app will not work without it
+            if(myToast != null) myToast.cancel();
+            myToast = Toast.makeText(MapsActivity.this, "Need location permissions for app to function", Toast.LENGTH_SHORT);
+            myToast.show();
+        }
+        //in future, could make app revert to GPS only if ACCESS_FINE_LOCATION is granted and not ACCESS_COARSE_LOCATION
+    }
+
+
+    LocationCallback createLocationCallback(){
+        //creates and returns a location callback. Location Callback is needed when requesting updates using Fused Location Provider
+        //also performs all of the mapping functions
+        myLocationCallback = new LocationCallback(){    //create new location callback
+            @Override
+            public void onLocationResult(LocationResult locationResult) {
+                //when location changes, display accuracy of that reading
+                //currentLocation = location;
+                if (on) {
+                    currentLocationResult = locationResult; //set current location
+                    if(!setStartTime) { // if start time not yet set
+                        //convert epoch time to calendar data
+                        cal.setTimeInMillis(currentLocation.getTime()); //get time and put into calendar
+                        time = dateFormatDayAndTime.format(cal.getTime());  //format date and time and set to string time
+                        setStartTime = true;    //start time is nofw set
+                    }
+                    if(!zoomed){   //if map was not previously zoomed in, zoom it in now on current location
+                        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()), 13));
+
+                        CameraPosition cameraPosition = new CameraPosition.Builder()
+                                .target(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()))      // Sets the center of the map to location user
+                                .zoom(18)                   // Set the zoom
+                                .bearing(0)                // Point north
+                                .tilt(0)                   // No tilt
+                                .build();                   // Creates a CameraPosition from the builder
+                        gMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                        zoomed = true;  //camera is now zoomed
+                    }
+                    //get lat and long
+                    currentLongitude = currentLocationResult.getLastLocation().getLongitude();
+                    currentLatitude = currentLocationResult.getLastLocation().getLatitude();
+
+                    //if user inputted the true lat and long, then calculate distance between GPS's location and true coordinates
+                    if(setTrueLatLng) {
+                        Location.distanceBetween(trueLat, trueLng, currentLatitude, currentLongitude, distanceError);
+                        distanceErrorList.add(distanceError[0]);
+                    }
+
+                    //set lat and long into LatLng type variable
+                    currentPosition = new LatLng(currentLatitude, currentLongitude);
+
+                    //get accuracy and put value into linked list.
+                    accuracyList.add(currentLocationResult.getLastLocation().getAccuracy());
+
+                    //display values on screen
+                    TV.setText("Running - #" + (numPins + 1) + " - " + currentLocationResult.getLastLocation().getAccuracy());
+
+                    //get time stamp
+                    timeList.add(dateFormatTime.format(System.currentTimeMillis()));
+
+                    addMarker();  //add marker to map with label and specific color
+
+                    //update camera position
+                    gMap.moveCamera(CameraUpdateFactory.newLatLng(currentPosition));
+
+                }
+            }
+        };
+        return myLocationCallback;
+    }
+
+
 
 }
 

@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -15,15 +16,14 @@ import java.util.Map;
 public class GetInterval extends AppCompatActivity {
 
     Toast myToast = null;
-
     boolean radioIsSet = false;
+    RadioGroup locationChoiceRadioGroup;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_get_interval);
 
-        radioIsSet = false;
 
         //setup UI
         final EditText interval_input = findViewById(R.id.interval_input);
@@ -31,6 +31,7 @@ public class GetInterval extends AppCompatActivity {
         final EditText lng_input = findViewById(R.id.lng_input);
         Button done = findViewById(R.id.done);
         TextView TV = findViewById(R.id.instructions);
+        locationChoiceRadioGroup = findViewById(R.id.LocationChoiceRadioGroup);
 
         //print instructions
         TV.setText(R.string.GetInterval_Instructions);
@@ -116,5 +117,17 @@ public class GetInterval extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        locationChoiceRadioGroup.clearCheck();  //clear radio group choices when leaving activity
+    }
+
+    @Override
+    protected void onPause(){
+        super.onPause();
+        locationChoiceRadioGroup.clearCheck();  //clear radio group choices when leaving activity
+
+    }
 
 }
