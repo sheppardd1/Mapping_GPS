@@ -28,6 +28,7 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationSettingsRequest;
 import com.google.android.gms.location.SettingsClient;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -113,7 +114,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //FusedLocationClient fusedLocationClient;
     //FusedLocationProviderClient a;
 
-    public FusedLocationProviderClient myFusedLocationClient;
+    FusedLocationProviderClient myFusedLocationClient;
     LocationRequest myLocationRequest;
 
     LocationCallback myLocationCallback;
@@ -213,9 +214,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         });
     }
 
-    /********************************************************************
-     *Activity Functions:
-     ********************************************************************/
+/********************************************************************
+ *Activity Functions:
+ ********************************************************************/
 
     @Override
     protected void onResume() {
@@ -258,17 +259,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-    /********************************************************************
-     *Functions used regardless of location method:
-     ********************************************************************/
+/********************************************************************
+ *Functions used regardless of location method:
+ ********************************************************************/
 
     public void setup() {   //initializes basic vars and UI stuff
 
         if (!setInterval) {
             startActivity(new Intent(getApplicationContext(), GetInterval.class));
         }
-
-        final int UPDATE_INTERVAL = interval;
 
         cal = Calendar.getInstance();   //instantiate a calendar
         //define the data formats
@@ -345,7 +344,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             else fileContents = "------------------------------\n Start: " + time + "\n";
 
             //convert epoch time to calendar data
-            cal.setTimeInMillis(currentLocation.getTime());
+            if(useFusedLocation) cal.setTimeInMillis(currentLocationResult.getLastLocation().getTime());
+            else cal.setTimeInMillis(currentLocation.getTime());
 
             //print accuracy value on screen along with coordinates and time
             time = dateFormatDayAndTime.format(cal.getTime());
@@ -416,33 +416,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         gMap = googleMap;   //set gMap to the 'inputted' googleMap
 
         Criteria criteria = new Criteria(); //not completely sure how this works, but it does
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {    //[can't just call getPermissionsFINE() here because app would crash if you tried]
-            //ensure we have the right permissions
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
-                if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    //if permission still not granted, tell user app will not work without it
-                    if (myToast != null) myToast.cancel();
-                    myToast = Toast.makeText(MapsActivity.this, "Need GPS permissions for app to function", Toast.LENGTH_SHORT);
-                    myToast.show();
-                    getPermissionsFINE();//Not yet tested here - hopefully this is the right place to put this.
-                }
-                //once permission is granted, set up location listener
-                //updating every UPDATE_INTERVAL milliseconds, regardless of distance change
-                else
-                    locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
-                //locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
-                locationPermissionGranted = true;
-                return;
-            }
-        }
 
         //get last known location
-        Location lastLocation = locationManager.getLastKnownLocation(locationManager.getBestProvider(criteria, false));
+        Location lastLocation;
+        //if using fused location and permissions are given
+        if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED && useFusedLocation) {
+            lastLocation = myFusedLocationClient.getLastLocation().getResult();
+        }
+        //else if using GPS and permissions given
+        else if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && !useFusedLocation){
+            lastLocation = locationManager.getLastKnownLocation(locationManager.getBestProvider(criteria, false));
+        }
+        else{   //else cannot get last location
+            lastLocation = null;
+        }
+
         if (lastLocation != null) {
             //zoom in camera on last known location when app is initialized
-            gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()), 13));
-
             CameraPosition cameraPosition = new CameraPosition.Builder()
                     .target(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()))      // Sets the center of the map to location user
                     .zoom(18)                   // Set the zoom value
@@ -455,6 +446,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             //if no last-known location, then center map over Wichita
             LatLng wichita = new LatLng(37.6913, 262.6503);
             gMap.moveCamera(CameraUpdateFactory.newLatLng(wichita));
+            zoomed = false;
         }
     }
 
@@ -463,9 +455,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if(on) { //ensures the program is "on"
             if(useFusedLocation){
+                myFusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
                 FusedLocationDetails();
             }
-            else {
+            else {  //TODO: setup location manager here
                 GPSLocationDetails();
             }
         }
@@ -499,8 +492,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             //note: numPins was previously incremented, so use numPins-1 as index
             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
         }
-        else if (accuracyList.get(numPins - 1) < 25)   //if 10 <= accuracy < 25, yellow marker
-        {
+        else if (accuracyList.get(numPins - 1) < 25){   //if 10 <= accuracy < 25, yellow marker
             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW));
         }
         else if (accuracyList.get(numPins - 1) < 100){   //else red marker for 25 <= accuracy < 100
@@ -514,9 +506,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         gMap.addMarker(markerOptions);
     }
 
-    /********************************************************************
-     *Functions for when using GPS only:
-     ********************************************************************/
+/********************************************************************
+ *Functions for when using GPS only:
+ ********************************************************************/
 
     void setCriteria(){ //sets criteria for GPS signal
 
@@ -547,15 +539,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         setStartTime = true;    //start time is now set
                     }
                     if(!zoomed){   //if map was not previously zoomed in, zoom it in now on current location
-                        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()), 13));
 
-                        CameraPosition cameraPosition = new CameraPosition.Builder()
-                                .target(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()))      // Sets the center of the map to location user
-                                .zoom(18)                   // Set the zoom
-                                .bearing(0)                // Point north
-                                .tilt(0)                   // No tilt
-                                .build();                   // Creates a CameraPosition from the builder
-                        gMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                        gMap.animateCamera(CameraUpdateFactory.zoomTo(18));
+
                         zoomed = true;  //camera is now zoomed
                     }
                     //get lat and long
@@ -654,9 +640,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
-    /********************************************************************
-     *Functions for when using Fused Location Services:
-     ********************************************************************/
+/********************************************************************
+ *Functions for when using Fused Location Services:
+ ********************************************************************/
 
     //for use when using Fused Loc Serv
     void FusedLocationDetails(){    //calls functions to create a location request, get permissions, and request location updates (which takes care of mapping, etc.
@@ -664,6 +650,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         createLocationRequest(); //specify params for fused location request
 
         //if permission is needed, get it
+        //and request location updates
         if (!locationPermissionGranted) {//ensures that this only executes once after permission is granted
             getPermissionsCOARSEandFINE();
         }
@@ -746,20 +733,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     currentLocationResult = locationResult; //set current location
                     if(!setStartTime) { // if start time not yet set
                         //convert epoch time to calendar data
-                        cal.setTimeInMillis(currentLocation.getTime()); //get time and put into calendar
+                        cal.setTimeInMillis(currentLocationResult.getLastLocation().getTime()); //get time and put into calendar
                         time = dateFormatDayAndTime.format(cal.getTime());  //format date and time and set to string time
-                        setStartTime = true;    //start time is nofw set
+                        setStartTime = true;    //start time is now set
                     }
                     if(!zoomed){   //if map was not previously zoomed in, zoom it in now on current location
-                        gMap.animateCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()), 13));
 
-                        CameraPosition cameraPosition = new CameraPosition.Builder()
-                                .target(new LatLng(currentLocation.getLatitude(), currentLocation.getLongitude()))      // Sets the center of the map to location user
-                                .zoom(18)                   // Set the zoom
-                                .bearing(0)                // Point north
-                                .tilt(0)                   // No tilt
-                                .build();                   // Creates a CameraPosition from the builder
-                        gMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+                        gMap.animateCamera(CameraUpdateFactory.zoomTo(18));
+
                         zoomed = true;  //camera is now zoomed
                     }
                     //get lat and long
