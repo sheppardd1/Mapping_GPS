@@ -54,9 +54,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     static final String filename = "GPS_data.txt";  //name of file where data is saved
 
     //Location:
+    //For GPS only:
     public Location currentLocation;
     static LocationManager locationManager;
     static LocationListener locationListener;
+    //For Fused Location Provider:
+    FusedLocationProviderClient myFusedLocationClient;
+    LocationRequest myLocationRequest;
+    LocationCallback myLocationCallback;
+    LocationResult currentLocationResult;
 
     //Files:
     File dataFile;
@@ -92,6 +98,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     boolean zoomed = false; //true if camera has zoomed in on location yet
     boolean locationPermissionGranted = false;  //true once location permission is granted. Used to ensure that location updates are only requested once
     boolean paused = false; //only true if paused (not running or stopped). Used to prevent ViewData activity from starting while paused
+    static boolean usingCriteria;  //true if specifying high accuracy criteria for location
     static boolean useFusedLocation; //true if user selects radio button for Fused Location Services, false if selected GPS
     static boolean setInterval = false; //true if user has specified GPS refresh rate
     static boolean setTrueLatLng = false;    //specifies if user inputs true values of lat and long
@@ -110,17 +117,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     //criteria for location:
     Criteria locationCriteria = new Criteria();
 
-    //GoogleApiClient mGoogleApiClient;
-    //FusedLocationClient fusedLocationClient;
-    //FusedLocationProviderClient a;
-
-    FusedLocationProviderClient myFusedLocationClient;
-    LocationRequest myLocationRequest;
-
-    LocationCallback myLocationCallback;
-
-    LocationResult currentLocationResult;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -132,6 +128,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mapFragment.getMapAsync(this);
 
         setup();    //initialize everything
+
+        assert !(usingCriteria && useFusedLocation);    //if this is true, there is a problem
 
         if (interval == 0 && setInterval) {
             //if user sets update interval to 0, warn of battery drain
@@ -222,6 +220,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected void onResume() {
         super.onResume();
         reset();
+        TV.setText(R.string.PressStart);
     }
 
     @Override
@@ -235,6 +234,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             locationManager.removeUpdates(locationListener); //stop location updates, also ensures no duplicate update requests
         }
         //else methods needed for location have not been instantiated (are still null) so we don't need to remove location updates (if we try, app will crash)
+        TV.setText("Program Paused");
+
     }
 
     @Override
@@ -248,6 +249,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             locationManager.removeUpdates(locationListener); //stop location updates, also ensures no duplicate update requests
         }
         //else methods needed for location have not been instantiated (are still null) so we don't need to remove location updates (if we try, app will crash)
+        TV.setText("Program Stopped");
     }
 
     @Override
@@ -292,7 +294,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         dataFile = new File(filename);//create file
 
-        if(!useFusedLocation){
+        if(!useFusedLocation && usingCriteria){
             setCriteria();
         }
     }
@@ -361,8 +363,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if(useFusedLocation){
                     fileContents += "Using Fused Location Services\n";
                 }
+                else if (usingCriteria){
+                    fileContents += "Using GPS with High Accuracy Criteria\n";
+                }
                 else{
-                    fileContents += "Using GPS Only\n";
+                    fileContents += "Using GPS without Criteria\n";
                 }
 
                 //print user-specified lat lng if applicable
@@ -377,9 +382,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 if(useFusedLocation){
                     fileContents += "Using Fused Location Services\n";
                 }
-                else{
-                    fileContents += "Using GPS Only\n";
+                else if (usingCriteria){
+                    fileContents += "Using GPS with High Accuracy Criteria\n";
                 }
+                else{
+                    fileContents += "Using GPS without Criteria\n";
+                }
+
                 fileContents += "#  | Accuracy | Time\n";
             }
         }
@@ -395,7 +404,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         if (i == numPins - 1) {  //end of data that must be written is reached
-            fileContents += "\nAverage Accuracy Radius: " + String.format("%.2f", averageAccuracy) + "\n"; //write the average accuracy reading
+            fileContents += "\nAverage Accuracy Radius: " + String.format("%.2f", averageAccuracy) + "\n\n"; //write the average accuracy reading
             if (setTrueLatLng)
                 fileContents += "Average True Error: " + String.format("%.2f", averageError) + "\n\n"; //write the average error value
             try {   //write file
@@ -445,14 +454,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             //zoom in camera on last known location when app is initialized
             CameraPosition cameraPosition = new CameraPosition.Builder()
                     .target(new LatLng(lastLocation.getLatitude(), lastLocation.getLongitude()))      // Sets the center of the map to location user
-                    .zoom(18)                   // Set the zoom value
+                    .zoom(18f)                   // Set the zoom value
                     .bearing(0)                // Point North
                     .tilt(0)                   // No tilt
                     .build();                   // Creates a CameraPosition from the builder
             gMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));  //set camera to position defined above
             zoomed = true;  //camera has now been zoomed, does not need to happen again
         } else {
-            //if no last-known location, then center map over Wichita
+            //if no last-known location, then center map over Wichita without zooming
             LatLng wichita = new LatLng(37.6913, 262.6503);
             gMap.moveCamera(CameraUpdateFactory.newLatLng(wichita));
             zoomed = false;
@@ -537,7 +546,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                     if(!zoomed){   //if map was not previously zoomed in, zoom it in now on current location
 
-                        gMap.animateCamera(CameraUpdateFactory.zoomTo(18));
+                        gMap.animateCamera(CameraUpdateFactory.zoomTo(18f));
 
                         zoomed = true;  //camera is now zoomed
                     }
@@ -609,22 +618,22 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 //once permission is granted, set up location listener
                 //updating every "interval" milliseconds, regardless of distance change
                 else{
-                    locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
-                    //locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
+                    if(usingCriteria) locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
+                    else locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
                     locationPermissionGranted = true;
                 }
             }
             else {
-                locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
-                //locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
+                if(usingCriteria) locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
+                else locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
                 locationPermissionGranted = true;
             }
 
         }   //else if below Marshmallow, we don't need to ask special permission
         else if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED){
             assert locationManager != null;
-            locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
-            //locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
+            if(usingCriteria) locationManager.requestLocationUpdates(interval, 0, locationCriteria, locationListener, null);
+            else locationManager.requestLocationUpdates("gps", interval, 0, locationListener);
             locationPermissionGranted = true;
         }
         else{
@@ -735,7 +744,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     }
                     if(!zoomed){   //if map was not previously zoomed in, zoom it in now on current location
 
-                        gMap.animateCamera(CameraUpdateFactory.zoomTo(18));
+                        gMap.animateCamera(CameraUpdateFactory.zoomTo(18f));
 
                         zoomed = true;  //camera is now zoomed
                     }
@@ -774,10 +783,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
-}
-
-
-/********************************************************************
+/* *******************************************************************
  *Notes:
  ********************************************************************/
 
@@ -792,3 +798,5 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     included in this Location. If this location does not have a horizontal accuracy, then 0.0
     is returned. All locations generated by the LocationManager include horizontal accuracy."
      */
+
+}

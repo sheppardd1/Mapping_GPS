@@ -104,16 +104,25 @@ public class GetInterval extends AppCompatActivity {
         switch(view.getId()) {
             case R.id.radio_GPS:
                 if (checked) {
+                    MapsActivity.usingCriteria = false;
                     MapsActivity.useFusedLocation = false;
                     radioIsSet = true;  //once a radio button is checked, user cannot uncheck all buttons
                 }
                     break;
-            case R.id.radio_Fused:
-                if (checked) {
-                    MapsActivity.useFusedLocation = true;
-                    radioIsSet = true;  //once a radio button is checked, user cannot uncheck all buttons
+            case R.id.radio_CriteriaGPS:
+                if (checked){
+                    MapsActivity.usingCriteria = true;
+                    MapsActivity.useFusedLocation = false;
+                    radioIsSet = true;
                 }
                     break;
+            case R.id.radio_Fused:
+            if (checked) {
+                MapsActivity.usingCriteria = false;
+                MapsActivity.useFusedLocation = true;
+                    radioIsSet = true;  //once a radio button is checked, user cannot uncheck all buttons
+                }
+            break;
         }
     }
 
