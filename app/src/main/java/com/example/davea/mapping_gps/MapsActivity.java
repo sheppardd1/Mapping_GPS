@@ -283,7 +283,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         timeList.clear();
         distanceErrorList.clear();
 
-        if(!useFusedLocation) locationManager = (LocationManager) getSystemService(LOCATION_SERVICE); //set up location manager
+        if(!useFusedLocation) locationManager = (LocationManager) getSystemService(LOCATION_SERVICE); //set up location managersetfaseddddd
 
         //define buttons and textview
         start = findViewById(R.id.btnStartStop);
@@ -665,12 +665,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //setting parameters for fused location requests (if applicable)
     private void createLocationRequest()
-    {  //   https://github.com/codepath/android_guides/wiki/Retrieving-Location-with-LocationServices-API
+    {  //see explanations on   https://github.com/codepath/android_guides/wiki/Retrieving-Location-with-LocationServices-API
 
-        myLocationRequest= new LocationRequest();
-        myLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        myLocationRequest.setInterval(interval);
-        myLocationRequest.setFastestInterval(interval);
+        myLocationRequest= new LocationRequest();   //setup new location request to be used when requesting location updates
+        myLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);  //want highest accuracy possible
+        //setting approx, max, and min update intervals to the same value
+        myLocationRequest.setInterval(interval);    //set approx update interval
+        myLocationRequest.setFastestInterval(interval); //set max update interval
+        myLocationRequest.setMaxWaitTime(interval);     //set min update interval
 
         // Create LocationSettingsRequest object using location request
         LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder();
@@ -702,19 +704,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 }
                 //once permission is granted, set up location listener
                 else{
-                    myFusedLocationClient.requestLocationUpdates(myLocationRequest, createLocationCallback(), null);
+                    myFusedLocationClient.requestLocationUpdates(myLocationRequest, createLocationCallback(), null);    //request updates
                     locationPermissionGranted = true;
                 }
             }
             else {
-                myFusedLocationClient.requestLocationUpdates(myLocationRequest, createLocationCallback(), null);
+                myFusedLocationClient.requestLocationUpdates(myLocationRequest, createLocationCallback(), null);    //request updates
                 locationPermissionGranted = true;
             }
 
         }   //else if below Marshmallow, we don't need to ask special permission
         else if(ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
                 ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
-            myFusedLocationClient.requestLocationUpdates(myLocationRequest, createLocationCallback(), null);
+            myFusedLocationClient.requestLocationUpdates(myLocationRequest, createLocationCallback(), null);    //request updates
             locationPermissionGranted = true;
         }
         else{
@@ -723,7 +725,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             myToast = Toast.makeText(MapsActivity.this, "Need location permissions for app to function", Toast.LENGTH_SHORT);
             myToast.show();
         }
-        //in future, could make app revert to GPS only if ACCESS_FINE_LOCATION is granted and not ACCESS_COARSE_LOCATION
+        //in future, could make app revert to only use GPS if ACCESS_FINE_LOCATION is granted but not ACCESS_COARSE_LOCATION
     }
 
 
