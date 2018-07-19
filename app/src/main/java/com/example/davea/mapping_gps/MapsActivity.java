@@ -265,6 +265,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
  *Functions used regardless of location method:
  ********************************************************************/
 
+
     public void setup() {   //initializes basic vars and UI stuff
 
         if (!setInterval) {
