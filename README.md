@@ -28,7 +28,11 @@
 - The data can be copied to the clipboard by clicking COPY.
 - The data can be cleared by clicking DELETE.
 ## Screenshots
-Below are two screenshots. The left shows the app running with the labels on the map corresponding to where the phone's estimated location is. The right shows the contents of the .txt with all of the data recorded.
+### Initialization UI
+This is what the user sees when starting the app.
+<img src="StartingUI.png" width="240" height="371">
+### oPerating and Data Recording UI
+The left image shows the app running with the labels on the map corresponding to where the phone's estimated location is. The right shows the contents of the .txt with all of the data recorded.
 <img src="screenshots.png" width="679" height="525">
 ## Notes
 1. You need to include a Google Maps API key in the googe_maps_api.xml file in place of "YOUR_KEY_HERE" for this app to work.
