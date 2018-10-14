@@ -3,6 +3,8 @@
 - Makes it possible to test phone potitioning capabilities or GPS signal at a certain location.<sup>1</sup>
 - Allows user to see error values of mobile phone positioning methods
 - Allows all collected data to be exported as a .txt file
+- Created: June 2018
+- Last Updated: July 2018
 ## Location Methods that app supports testing for:
 * GPS
 * GPS with high accuracy criteria
