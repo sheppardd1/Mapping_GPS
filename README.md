@@ -27,6 +27,7 @@
 - The data can be exported as a .txt file by clicking SHARE while viewing the data.
 - The data can be copied to the clipboard by clicking COPY.
 - The data can be cleared by clicking DELETE.
+![Screenshot](screenshots.jpg?raw=true "Screenshot")
 ## Notes
 1. You need to include a Google Maps API key in the googe_maps_api.xml file in place of "YOUR_KEY_HERE" for this app to work.
 2. An explanation of the getAccuracy() funciton can be found at: https://developer.android.com/reference/android/location/Location#getAccuracy()
