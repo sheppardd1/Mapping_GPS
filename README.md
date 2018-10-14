@@ -29,7 +29,7 @@
 - The data can be cleared by clicking DELETE.
 ## Screenshots
 Below are two screenshots. The left shows the app running with the labels on the map corresponding to where the phone's estimated location is. The right shows the contents of the .txt with all of the data recorded.
-![Screenshots](screenshots.png?raw=true "Screenshots") <img src="Screenshots" width="291" height="225">
+![Screenshots](screenshots.png?raw=true "Screenshots") <img src="screenshots.png" width="291" height="225">
 ## Notes
 1. You need to include a Google Maps API key in the googe_maps_api.xml file in place of "YOUR_KEY_HERE" for this app to work.
 2. An explanation of the getAccuracy() funciton can be found at: https://developer.android.com/reference/android/location/Location#getAccuracy()
