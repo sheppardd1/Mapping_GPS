@@ -38,4 +38,4 @@ The left image shows the app running with the labels on the map corresponding to
 <img src="screenshots.png" width="679" height="525">
 ## Notes
 1. You need to include a Google Maps API key in the googe_maps_api.xml file in place of "YOUR_KEY_HERE" for this app to work.
-2. An explanation of the getAccuracy() funciton can be found at: https://developer.android.com/reference/android/location/Location#getAccuracy()
+2. An explanation of the getAccuracy() funciton can be found <a href="https://developer.android.com/reference/android/location/Location#getAccuracy()">here</a>.
