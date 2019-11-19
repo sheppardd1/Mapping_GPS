@@ -39,7 +39,7 @@ This is what the user sees when starting the app. Here, they have the option to 
 ### Operating and Data Recording UI
 The left image shows the app running with the labels on the map corresponding to where the phone's estimated location is. The right shows the contents of the .txt with all of the data recorded. In this example, the user had provided the true latitude and longitude values at startup so the app was able to calculate and display the true error. The column labels in left image are:
 - "#": data point number
-- "Accuracy": accuracy radius estimated by Google's built-in getAccuracy() function (see note number 2)
+- "Accuracy": accuracy radius estimated by Google's built-in getAccuracy() function<sup>2</sup>
 - "Error": true error (i.e. distance between GPS Lat Lng and user-provided true Lat Lng values)
 - "Time": timestamp of data point
 <img src="screenshots.png" width="679" height="525">
