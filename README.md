@@ -1,6 +1,6 @@
 # Mapping_GPS - Android App
 ## Purpose
-- Makes it possible to test phone potitioning capabilities or GPS signal at a certain location.<sup>1</sup>
+- Makes it possible to test phone positioning capabilities or GPS signal at a certain location.<sup>1</sup>
 - Allows user to see error values of mobile phone positioning methods
 - Allows all collected data to be exported as a .txt file
 - Created: June 2018
@@ -10,8 +10,8 @@
 * GPS with high accuracy criteria
 * Fused Location Services
 ## Use
-- When launching, use specifies location refresh rate, positioning mehtod (see above), and their true latitude and longitude coordinates (if known).
-- Once this is selected, user presses START button to begin retreiving location data. 
+- When launching, use specifies location refresh rate, positioning method (see above), and their true latitude and longitude coordinates (if known).
+- Once this is selected, user presses START button to begin retrieving location data.
 - At this point, the location readings of the phone are plotted on a map with labels corresponding the the estimated accuracy reading as given by Android's getAccuracy() function.
 - The readings can be paused/restarted.
 - Once paused, the data can be written to a .txt file by pressing SAVE. This data can be viewed by pressing VIEW DATA.
