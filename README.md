@@ -43,6 +43,7 @@ The left image shows the app running with the labels on the map corresponding to
 - "Error": true error (i.e. distance between GPS Lat Lng and user-provided true Lat Lng values)
 - "Time": timestamp of data point
 <img src="screenshots.png" width="679" height="525">
+
 ## Notes
 1. You need to include a Google Maps API key in the google_maps_api.xml file in place of "YOUR_KEY_HERE" for this app to work.
 2. An explanation of the getAccuracy() function can be found <a href="https://developer.android.com/reference/android/location/Location#getAccuracy()">here</a>.
