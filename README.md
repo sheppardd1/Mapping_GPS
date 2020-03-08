@@ -47,3 +47,6 @@ The left image shows the app running with the labels on the map corresponding to
 ## Notes
 1. You need to include a Google Maps API key in the google_maps_api.xml file in place of "YOUR_KEY_HERE" for this app to work.
 2. An explanation of the getAccuracy() function can be found <a href="https://developer.android.com/reference/android/location/Location#getAccuracy()">here</a>.
+
+## Recent Updates
+7MAR2020: Migrated android.support libraries to androidx libraries. The android.support libraries will no longer be updated by Google. This migration was accompanied by some minor GUI layout tweaks - none should be noticeable to user.
